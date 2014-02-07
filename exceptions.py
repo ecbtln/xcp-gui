@@ -1,0 +1,2 @@
+class InvalidRPCMethod(Exception):
+    pass
