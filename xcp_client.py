@@ -1,4 +1,4 @@
-__author__ = 'elubin'
+
 
 import json
 import requests

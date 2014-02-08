@@ -1,4 +1,3 @@
-__author__ = 'elubin'
 
 import sys
 import argparse
@@ -124,7 +123,8 @@ class AssetIssueDialog(QDialog):
         button_box.accepted.connect(self.submit)
         self.setSizeGripEnabled(False)
 
-    def submit(self, asset_name, callable, divisible, amount):
+    def submit(self):
+        # , asset_name, callable, divisible, amount
         print("We should be making a http call!")
         self.close()
 
@@ -138,10 +138,10 @@ class SendAssetWidget(QWidget):
         super(SendAssetWidget, self).__init__(*args, **kwargs)
         form_layout = QFormLayout()
         self.setLayout(form_layout)
-        line_edit = QLineEdit()
-        line_edit.setPlaceholderText("Destination address")
-        line_edit.setFixedWidth(285)
-        form_layout.addRow("Pay To: ", line_edit)
+        self.line_edit = QLineEdit()
+        self.line_edit.setPlaceholderText("Destination address")
+        self.line_edit.setFixedWidth(150)
+        form_layout.addRow("Pay To: ", self.line_edit)
         self.combo_box = QComboBox()
 
         form_layout.addRow("Asset: ", self.combo_box)
@@ -151,11 +151,15 @@ class SendAssetWidget(QWidget):
         self.update_assets(self.assets)
         form_layout.addRow("Amount: ", self.spinbox)
         button_box = QDialogButtonBox()
-        button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+        button_box.addButton("Reset", QDialogButtonBox.RejectRole)
         button_box.addButton("Send", QDialogButtonBox.AcceptRole)
         form_layout.addRow(button_box)
-        button_box.rejected.connect(self.close)
+        button_box.rejected.connect(self.reset_form)
         button_box.accepted.connect(self.submit)
+
+    def reset_form(self):
+        self.line_edit.setText("")
+        self.spinbox.setValue(0)
 
     def update_assets(self, assets):
         self.combo_box.clear()
@@ -176,9 +180,9 @@ class SendAssetWidget(QWidget):
             self.spinbox.setRange(0, 0)
             self.spinbox.setEnabled(False)
 
-    def submit(self, asset_name, callable, divisible):
+    def submit(self):
+        # asset_name, amount, address
         print("We should be making a http call to send the $$")
-        self.close()
 
 
 class TransactionHistory(QWidget):
