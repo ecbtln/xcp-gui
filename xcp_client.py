@@ -5,7 +5,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from exceptions import InvalidRPCMethod, InvalidRPCArguments, RPCError
 
-BTC_ADDRESS = 'miVQuX6QCaCNa3aY7xF5TR1WXpwXNtbwmn'
+BTC_ADDRESS = 'mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th'
 
 
 class XCPClient(object):
@@ -36,7 +36,12 @@ class XCPClient(object):
 
         response = requests.post(self.url, data=json.dumps(payload), headers=self.headers, auth=self.auth)
         if response:
-            return response.json().get('result', None)
+            js = response.json()
+            if 'result' in js:
+                return js['result']
+            else:
+                assert 'error' in js
+                raise InvalidRPCArguments(str(js['error']))
         else:
             raise RPCError("Unable to load request at URL: %s, with payload: %s" % (self.url, str(payload)))
 
@@ -54,8 +59,8 @@ class XCPClient(object):
 
 
 if __name__ == '__main__':
-    client = XCPClient()
+    client = XCPClient(port=14000)
 
     # get balances for all assets, including xcp, for a given address
     print(client.xcp_supply())
-    print(client.get_balances())
+    print(client.get_balances({'field': 'address', 'op': '==', 'value': BTC_ADDRESS}))
