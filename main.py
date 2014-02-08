@@ -28,9 +28,8 @@ class MainWindow(QMainWindow):
         tabWidget.setLayout(QVBoxLayout())
         tabWidget.resize(750, 475)
         tabWidget.move(25, 100)
-        #tabWidget.addTab(SendDialog(assets={'XCP': 1000, 'FUCK':100990012}), "Send")
         tabWidget.addTab(CurrencyExchange(), "BTC/XCP Exchange")
-        tabWidget.addTab(AssetExchange(), "Assets")
+        tabWidget.addTab(AssetExchange(), "My Portfolio")
         tabWidget.addTab(TransactionHistory(), "Transaction History")
         #self.menuBar().addMenu('Counterparty')
         self.show()
@@ -59,7 +58,9 @@ class AssetExchange(QWidget):
         self.asset_table = MyAssetTable()
         grid_layout.addWidget(self.asset_table, 0, 1, 2, 1)
         self.setLayout(grid_layout)
+        self.fetch_assets()
 
+    def fetch_assets(self):
         def process_balances(bals):
             assets = {}
             for entry in bals:
@@ -69,7 +70,7 @@ class AssetExchange(QWidget):
                 v = entry.get('amount', 0)
                 assets[k] = assets.get(k, 0) + v
             self.set_assets(assets)
-        RPC.client.get_balances(BTC_ADDRESS, process_balances)
+        RPC.client.get_balances(BTC_ADDRESS, process_balances) # TODO: this should be a dynamic address
 
     def present_dialog(self):
         dialog = AssetIssueDialog()
