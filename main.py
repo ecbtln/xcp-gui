@@ -111,7 +111,7 @@ class AssetIssueDialog(QDialog):
         spinbox = QSpinBox()
         spinbox.setMinimumWidth(100)
         spinbox.setMinimum(1)
-        spinbox.setMaximum(sys.maxsize)
+        spinbox.setMaximum(99999999999999999)
         form_layout.addRow("Amount: ", spinbox)
         form_layout.addRow("Divisible:", QCheckBox())
         form_layout.addRow("Callable:", QCheckBox())
@@ -158,8 +158,12 @@ class SendAssetWidget(QWidget):
 
     def update_assets(self, assets):
         self.combo_box.clear()
-        self.combo_box.addItems(list(assets.keys()))
-        self.combo_box.setEnabled(len(assets) > 0)
+        all_keys = list(assets.keys())
+        num_assets = len(assets)
+        self.combo_box.addItems(all_keys)
+        self.combo_box.setEnabled(num_assets > 0)
+        if num_assets > 0:
+            self.combo_box.setCurrentText(all_keys[0])
         self.assets = assets
         self.update_spinbox_range()
 
