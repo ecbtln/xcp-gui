@@ -3,7 +3,9 @@ __author__ = 'elubin'
 import json
 import requests
 from requests.auth import HTTPBasicAuth
-from exceptions import InvalidRPCMethod
+from exceptions import InvalidRPCMethod, InvalidRPCArguments, RPCError
+
+BTC_ADDRESS = 'miVQuX6QCaCNa3aY7xF5TR1WXpwXNtbwmn'
 
 
 class XCPClient(object):
@@ -26,16 +28,34 @@ class XCPClient(object):
             params = {}
 
         payload = {
-            "method" : method,
-            "params" : params,
-            "jsonrpc" : "2.0",
-            "id" : 0
+            "method": method,
+            "params": params,
+            "jsonrpc": "2.0",
+            "id": 0
         }
 
-        return requests.post(self.url, data=json.dumps(payload), headers=self.headers, auth=self.auth).json()
+        response = requests.post(self.url, data=json.dumps(payload), headers=self.headers, auth=self.auth)
+        if response:
+            return response.json().get('result', None)
+        else:
+            raise RPCError("Unable to load request at URL: %s, with payload: %s" % (self.url, str(payload)))
 
     def __getattr__(self, item):
         if item in self.VALID_API_METHODS:
-            return lambda **kwargs: self._call_api(item, kwargs)
+            # only allow *args or **kwargs, but not both
+            def api_call(*args, **kwargs):
+                if len(args) and len(kwargs):
+                    raise InvalidRPCArguments("The api call can take either arguments, or keywords, but not both.")
+                return self._call_api(item, args or kwargs or None)
+            return api_call
         else:
             return super(XCPClient, self).__getattribute__(item)
+
+
+
+if __name__ == '__main__':
+    client = XCPClient()
+
+    # get balances for all assets, including xcp, for a given address
+    print(client.xcp_supply())
+    print(client.get_balances())
