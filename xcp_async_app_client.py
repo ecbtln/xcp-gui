@@ -1,4 +1,4 @@
-from xcp_client import XCPClient, BTC_ADDRESSES
+from xcp_client import XCPClient
 import threading
 
 class XCPAsyncAppClient(XCPClient):
@@ -29,20 +29,25 @@ class XCPAsyncAppClient(XCPClient):
         """
         Each element in the requests array is a lambda, that takes in one argument, the callback function
         """
-        results = [] * len(request)
-        l = threading.Semaphore()
-
-        num_left = len(requests) #TODO: needs to be atomic integer
+        results = [None] * len(requests)
+        class AtomicInteger:
+            val = len(requests)
+        semaphore = threading.Semaphore()
+        #num_left = len(requests)  # TODO: needs to be atomic integer
         for i, r in enumerate(requests):
-            def c_back(result):
+            def c_back(j, result):
 
-                results[i] = result
-                #TODO: lock
-                num_left -= 1
-                if num_left == 0:
+                results[j] = result
+                semaphore.acquire()
+                AtomicInteger.val -= 1   # TODO: AtomicInteger.decrementAndGet()
+                if AtomicInteger.val == 0:
                     callback(results)
+                semaphore.release()
                 #TODO: unlock
-            r(c_back)
+
+            # this is needed in python to make sure the value of i is copied. Essentially, we wrap the call to c_back
+            # in a lambda, which is immediately called with the desired value
+            r((lambda i: lambda res: c_back(i, res))(i))
 
     def get_assets_info(self, assets, callback):
         """
@@ -53,7 +58,9 @@ class XCPAsyncAppClient(XCPClient):
             return []
         self._call_multiple([lambda resp: self.get_asset_info(a, resp) for a in assets], callback)
 
-
-
     def do_send(self, source, destination, quantity, asset, callback):
         self._async_api_call('do_send', [source, destination, quantity, asset], callback)
+
+if __name__ == '__main__':
+    client = XCPAsyncAppClient(port=14000)
+    client.get_assets_info(['IIII', 'WEED'], lambda x: print(x))

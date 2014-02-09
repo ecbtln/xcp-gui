@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton, QForm
     QApplication, QDialog, QMainWindow, QComboBox, QSpinBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
     QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox
 from PyQt5.Qt import QCursor
-from constants import MAX_SPINBOX_INT
-from xcp_async_app_client import XCPAsyncAppClient, BTC_ADDRESSES
+from constants import MAX_SPINBOX_INT, XCP, BTC_ADDRESSES
+from xcp_async_app_client import XCPAsyncAppClient
 from models import Wallet, Asset, Portfolio
 
 
@@ -18,13 +18,14 @@ class APP:
 
 class MainWindow(QMainWindow):
     singleton = None
+
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__()
         MainWindow.singleton = self
         APP.rpc_client = XCPAsyncAppClient(*args, **kwargs)
-        self.fetch_initial_data()
         self.init_ui()
-
+        # needs to be fetched after to ensure UI is loaded
+        self.fetch_initial_data()
 
     def init_ui(self):
         self.setGeometry(300, 300, 800, 600)
@@ -64,14 +65,18 @@ class MainWindow(QMainWindow):
                     portfolios[address] = {}
                 p = portfolios[address]
                 p[asset] = p.get(asset, 0) + amount
+            # don't get_asset_info for XCP, we already know the info and the RCP does not take well with that request
+            if XCP in assets:
+                assets.remove(XCP)
 
             asset_name_list = list(assets)
 
             def process_asset_info(asset_info_results):
                 asset_info_list = [{'name': asset_name,
                                     'divisible': res['divisible'],
-                                    'callable': res['callable']} for asset_name, res in zip(asset_name_list,
-                                                                                            asset_info_results)]
+                                    'callable': res['callable'],
+                                    'owner': res['owner']} for asset_name, res in zip(asset_name_list,
+                                                                                      asset_info_results)]
                 # now massage the portfolios dictionary to be the desired format of the wallet method
                 new_portfolios = []
                 for address in portfolios:

@@ -3,16 +3,18 @@
 # This means divisible assets are divided by 100,000,000, and indivisible assets are left as is.
 
 
-SATOSHI_CONSTANT = 100000000
+from constants import SATOSHI_CONSTANT, XCP
 #TODO: decide consistent ordering of elements in list for each model
+
 
 class Asset:
     """ Immutable representation of an asset and its properties
     """
-    def __init__(self, name, divisible, callable=False):
+    def __init__(self, name, divisible, callable, owner):
         self.name = name
-        self.divisible = divisible
-        self.callable = callable
+        self.divisible = bool(divisible)  # the api sends them over as ints
+        self.callable = bool(callable) if callable is not None else None
+        self.owner = owner
 
     def format_for_api(self, amount):
         if self.divisible:
@@ -49,6 +51,12 @@ class Portfolio:
     def amount_for_asset(self, asset_name):
         self.amounts.get(asset_name, 0)
 
+    def owns_asset(self, asset_name):
+        asset = self.get_asset(asset_name)
+        if asset is None:
+            return False
+        return self.address == asset.owner
+
 
 class Wallet:
     def __init__(self, addresses):
@@ -61,6 +69,8 @@ class Wallet:
         # each asset is listed as a dictionary: with keys 'name', 'divisible', 'callable'
         # each portfolio is listed as a dictionary with keys 'address', 'assets', 'values'
         self.assets = {a['name']: Asset(**a) for a in all_assets}
+        # this asset is fixed and should always be available for reference
+        self.assets[XCP] = Asset(XCP, True, False, None)
         self.portfolios = {}
         for p in portfolios:
             p['wallet'] = self
