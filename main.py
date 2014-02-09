@@ -7,27 +7,24 @@ from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton, QForm
 from PyQt5.Qt import QCursor
 from constants import MAX_SPINBOX_INT
 from xcp_async_app_client import XCPAsyncAppClient, BTC_ADDRESSES
+from models import Wallet, Asset, Portfolio
 
-#TODO: use list instead of dictionary so that keys are always ordered consistently
 
 # stupid hack to get the global RPCClient and some other globals
-class RPC:
-    active_address_index = None
-    client = None
-    all_addresses = BTC_ADDRESSES
-
-    @classmethod
-    def active_address(cls):
-        if len(cls.all_addresses) and cls.active_address_index is not None:
-            return cls.all_addresses[cls.active_address_index]
+class APP:
+    rpc_client = None
+    wallet = Wallet(BTC_ADDRESSES)
 
 
 class MainWindow(QMainWindow):
-
+    singleton = None
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__()
-        RPC.client = XCPAsyncAppClient(*args, **kwargs)
+        MainWindow.singleton = self
+        APP.rpc_client = XCPAsyncAppClient(*args, **kwargs)
+        self.fetch_initial_data()
         self.init_ui()
+
 
     def init_ui(self):
         self.setGeometry(300, 300, 800, 600)
@@ -36,29 +33,60 @@ class MainWindow(QMainWindow):
         central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
         grid_layout = QGridLayout()
         tabWidget = QTabWidget()
-        # tabWidget.resize(750, 475)
-        # tabWidget.move(25, 100)
         tabWidget.addTab(CurrencyExchange(), "BTC/XCP Exchange")
         self.asset_exchange = AssetExchange()
         tabWidget.addTab(self.asset_exchange, "My Portfolio")
-        tabWidget.addTab(QWidget(), "Asset Info") # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM
+        tabWidget.addTab(QWidget(), "Asset Info (Lookup)")  # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM
         tabWidget.addTab(TransactionHistory(), "Transaction History")
 
         overview = QGroupBox('Overview')
         overview.setFixedWidth(250)
-        wallet = MyWalletGroupBox()
-        self.wallet = wallet
-        wallet.combo_box.currentIndexChanged.connect(self.change_selected_address)
-        self.change_selected_address()
-        grid_layout.addWidget(wallet, 0, 1)
+        wallet_view = MyWalletGroupBox()
+        self.wallet_view = wallet_view
+        grid_layout.addWidget(wallet_view, 0, 1)
         grid_layout.addWidget(overview, 0, 0)
         grid_layout.addWidget(tabWidget, 1, 0, 1, 2)
         central_widget.setLayout(grid_layout)
         self.show()
 
-    def change_selected_address(self):
-        RPC.active_address_index = self.wallet.combo_box.currentIndex()
-        self.asset_exchange.fetch_assets()
+    def fetch_initial_data(self):
+        wallet = APP.wallet
+
+        def process_balances(bals):
+            portfolios = {}
+            assets = set()
+            for entry in bals:
+                asset = entry['asset']
+                assets.add(asset)
+                address = entry['address']
+                amount = entry['amount']
+                if address not in portfolios:
+                    portfolios[address] = {}
+                p = portfolios[address]
+                p[asset] = p.get(asset, 0) + amount
+
+            asset_name_list = list(assets)
+
+            def process_asset_info(asset_info_results):
+                asset_info_list = [{'name': asset_name,
+                                    'divisible': res['divisible'],
+                                    'callable': res['callable']} for asset_name, res in zip(asset_name_list,
+                                                                                            asset_info_results)]
+                # now massage the portfolios dictionary to be the desired format of the wallet method
+                new_portfolios = []
+                for address in portfolios:
+                    p = portfolios[address]
+                    assets = list(p.keys())
+                    values = [p[a] for a in assets]
+                    new_portfolios.append({'address': address,
+                                           'assets': assets,
+                                           'values': values})
+                wallet.update_portfolios(asset_info_list, new_portfolios)
+                self.wallet_view.update_data(wallet.addresses)
+            APP.rpc_client.get_assets_info(asset_name_list, process_asset_info)
+
+        APP.client.get_balances(APP.wallet.addresses, process_balances)
+        #TODO: here's where we would first get the wallet addresses, but we'll take these for granted
 
 
 class MyWalletGroupBox(QGroupBox):
@@ -66,8 +94,8 @@ class MyWalletGroupBox(QGroupBox):
         super(QGroupBox, self).__init__('Wallet')
         self.setFixedHeight(130)
         self.combo_box = QComboBox()
-        self.combo_box.addItems(RPC.all_addresses)
-        self.combo_box.setCurrentIndex(0)
+        self.combo_box.currentIndexChanged.connect(self.selected_address_changed)
+        self.update_data(APP.wallet.addresses)
         form_layout = QFormLayout()
         form_layout.addRow("Select an Address: ", self.combo_box)
         button_box = QDialogButtonBox()
@@ -82,6 +110,21 @@ class MyWalletGroupBox(QGroupBox):
         #TODO: fix vertical alignment
         #form_layout.setAlignment(Qt.)
         self.setLayout(form_layout)
+
+    def update_data(self, addresses):
+        self.combo_box.clear()
+        if len(addresses) > 0:
+            self.combo_box.addItems(addresses)
+            self.combo_box.setCurrentIndex(0)
+        self.selected_address_changed()
+
+    def selected_address_changed(self):
+        wallet = APP.wallet
+        if self.combo_box.count() == 0:
+            wallet.active_address_index = None
+        else:
+            wallet.active_address_index = self.combo_box.currentIndex()
+        MainWindow.singleton.asset_exchange.update_data(wallet.active_portfolio)
 
     def copy_to_clipboard(self):
         QApplication.clipboard().setText(self.combo_box.currentText())
@@ -104,35 +147,22 @@ class AssetExchange(QWidget):
         grid_layout.addWidget(send_asset_box, 0, 0)
         misc_box = QGroupBox("Other Actions")
         issue_asset_button = QPushButton('Issue an Asset', misc_box)
+        do_bet_button = QPushButton('Make Bet', misc_box)
+        do_bet_button.move(25, 75)
         issue_asset_button.move(25, 25) # TODO: fix this
         issue_asset_button.clicked.connect(self.present_dialog)
         grid_layout.addWidget(misc_box, 1, 0)
         self.asset_table = MyAssetTable()
         grid_layout.addWidget(self.asset_table, 0, 1, 2, 1)
         self.setLayout(grid_layout)
-        self.fetch_assets()
-
-    def fetch_assets(self):
-        if RPC.active_address() is None:
-            return
-        def process_balances(bals):
-            assets = {}
-            for entry in bals:
-                k = entry.get('asset', False)
-                if not k:
-                    continue
-                v = entry.get('amount', 0)
-                assets[k] = assets.get(k, 0) + v
-            self.set_assets(assets)
-        RPC.client.get_balances(RPC.active_address(), process_balances) # TODO: this should be a dynamic address
 
     def present_dialog(self):
         dialog = AssetIssueDialog()
         dialog.exec_()
 
-    def set_assets(self, assets):
-        self.asset_table.update_data(assets)
-        self.send_asset_widget.update_assets(assets)
+    def update_data(self, portfolio):
+        self.asset_table.update_data(portfolio)
+        self.send_asset_widget.update_data(portfolio)
 
 
 class MyAssetTable(QTableWidget):
@@ -145,12 +175,12 @@ class MyAssetTable(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.cellDoubleClicked.connect(self.contextMenuEvent)
 
-    def update_data(self, assets):
+    def update_data(self, portfolio):
         self.clearContents()
-        self.setRowCount(len(assets))
-        for i, k in enumerate(assets.keys()):
-            self.setItem(i, 0, QTableWidgetItem(k))
-            self.setItem(i, 1, QTableWidgetItem(str(assets[k])))
+        self.setRowCount(len(portfolio.assets))
+        for a in enumerate(portfolio.assets):
+            self.setItem(i, 0, QTableWidgetItem(a.name))
+            self.setItem(i, 1, QTableWidgetItem(str(portfolio.amount_for_asset(a.name))))
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
@@ -245,14 +275,13 @@ class SendAssetWidget(QWidget):
         self.line_edit.setText("")
         self.spinbox.setValue(0)
 
-    def update_assets(self, assets):
+    def update_data(self, portfolio):
         self.combo_box.clear()
-        all_keys = list(assets.keys())
-        num_assets = len(assets)
-        self.combo_box.addItems(all_keys)
+        num_assets = len(portfolio.assets)
+        self.combo_box.addItems([a.name for a in portfolio.assets])
         self.combo_box.setEnabled(num_assets > 0)
         if num_assets > 0:
-            self.combo_box.setCurrentText(all_keys[0])
+            self.combo_box.setCurrentIndex(0)
         self.assets = assets
         self.update_spinbox_range()
 
@@ -275,9 +304,10 @@ class SendAssetWidget(QWidget):
     def submit(self):
         message_box = QMessageBox()
         message_box.setText("Are you sure?")
-        message_box.setInformativeText("About to send %d %s to %s.\n\nThis operation cannot be undone." % (self.spinbox.value(),
-                                                                                                     self.combo_box.currentText(),
-                                                                                                     self.line_edit.text()))
+        message_box.setInformativeText("About to send %d %s to %s.\n\n"
+                                       "his operation cannot be undone." % (self.spinbox.value(),
+                                                                            self.combo_box.currentText(),
+                                                                            self.line_edit.text()))
         message_box.setIcon(QMessageBox.Warning)
         message_box.addButton("Cancel", QMessageBox.RejectRole)
         message_box.addButton("Confirm", QMessageBox.AcceptRole)

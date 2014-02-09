@@ -26,6 +26,8 @@ class XCPClient(object):
 
         if params is None:
             params = {}
+        elif not isinstance(params, (list, tuple, dict)):
+            params = [params]
 
         payload = {
             "method": method,
@@ -51,7 +53,17 @@ class XCPClient(object):
             def api_call(*args, **kwargs):
                 if len(args) and len(kwargs):
                     raise InvalidRPCArguments("The api call can take either arguments, or keywords, but not both.")
-                return self._call_api(item, args or kwargs or None)
+                if len(kwargs) == 0:
+                    if len(args) == 0:
+                        params = None
+                    elif len(args) == 1:
+                        params = args[0]
+                    else:
+                        params = args
+                else:
+                    params = kwargs
+
+                return self._call_api(item, params)
             return api_call
         else:
             return super(XCPClient, self).__getattribute__(item)
@@ -62,5 +74,9 @@ if __name__ == '__main__':
     client = XCPClient(port=14000)
 
     # get balances for all assets, including xcp, for a given address
-    print(client.xcp_supply())
-    print(client.get_balances({'field': 'address', 'op': '==', 'value': BTC_ADDRESSES[0]}))
+    #print(float(client.xcp_supply()) / 100000000)
+    #print(client.get_balances([{'field': 'address', 'op': '==', 'value': BTC_ADDRESSES[0]}]))
+    print(client.get_balances({"filters": [{'field': 'address', 'op': '==', 'value': x} for x in BTC_ADDRESSES],
+                             "filterop": "or"}))
+    #print(client._call_api('get_asset_info', ['XCP']))
+    #print(client._call_api('get_address', ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf"]))
