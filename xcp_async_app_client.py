@@ -1,6 +1,7 @@
 from xcp_client import XCPClient
 import threading
 
+
 class XCPAsyncAppClient(XCPClient):
     """
     A subclass of the XCPClient that defines methods, with restricted parameters and asynchronous callbacks
@@ -39,11 +40,14 @@ class XCPAsyncAppClient(XCPClient):
 
                 results[j] = result
                 semaphore.acquire()
+                done = False
                 AtomicInteger.val -= 1   # TODO: AtomicInteger.decrementAndGet()
                 if AtomicInteger.val == 0:
-                    callback(results)
+                    done = True
                 semaphore.release()
                 #TODO: unlock
+                if done:
+                    callback(results)
 
             # this is needed in python to make sure the value of i is copied. Essentially, we wrap the call to c_back
             # in a lambda, which is immediately called with the desired value
@@ -55,8 +59,12 @@ class XCPAsyncAppClient(XCPClient):
         the global callback when the last has completed
         """
         if len(assets) == 0:
-            return []
-        self._call_multiple([lambda resp: self.get_asset_info(a, resp) for a in assets], callback)
+            callback([])
+        elif len(assets) == 1:
+            # the caller is expecting an array, so wrap the callback parameter in an array
+            self.get_asset_info(assets[0], lambda res: callback([res]))
+        else:
+            self._call_multiple([lambda resp: self.get_asset_info(a, resp) for a in assets], callback)
 
     def do_send(self, source, destination, quantity, asset, callback):
         self._async_api_call('do_send', [source, destination, quantity, asset], callback)
@@ -64,3 +72,5 @@ class XCPAsyncAppClient(XCPClient):
 if __name__ == '__main__':
     client = XCPAsyncAppClient(port=14000)
     client.get_assets_info(['IIII', 'WEED'], lambda x: print(x))
+    from constants import BTC_ADDRESSES
+    client.get_balances(BTC_ADDRESSES, lambda x: print(x))

@@ -72,6 +72,7 @@ class MainWindow(QMainWindow):
             asset_name_list = list(assets)
 
             def process_asset_info(asset_info_results):
+
                 asset_info_list = [{'name': asset_name,
                                     'divisible': res['divisible'],
                                     'callable': res['callable'],
@@ -90,7 +91,7 @@ class MainWindow(QMainWindow):
                 self.wallet_view.update_data(wallet.addresses)
             APP.rpc_client.get_assets_info(asset_name_list, process_asset_info)
 
-        APP.client.get_balances(APP.wallet.addresses, process_balances)
+        APP.rpc_client.get_balances(wallet.addresses, process_balances)
         #TODO: here's where we would first get the wallet addresses, but we'll take these for granted
 
 
@@ -182,8 +183,9 @@ class MyAssetTable(QTableWidget):
 
     def update_data(self, portfolio):
         self.clearContents()
-        self.setRowCount(len(portfolio.assets))
-        for a in enumerate(portfolio.assets):
+        assets = portfolio.assets if portfolio is not None else []
+        self.setRowCount(len(assets))
+        for i, a in enumerate(assets):
             self.setItem(i, 0, QTableWidgetItem(a.name))
             self.setItem(i, 1, QTableWidgetItem(str(portfolio.amount_for_asset(a.name))))
 
@@ -249,7 +251,6 @@ class SendAssetWidget(QWidget):
         """
         :param assets: a mapping of all your assets and the amount you have of each
         """
-        self.assets = {}
         super(SendAssetWidget, self).__init__(*args, **kwargs)
         form_layout = QFormLayout()
         self.setLayout(form_layout)
@@ -265,8 +266,8 @@ class SendAssetWidget(QWidget):
         self.spinbox = QSpinBox()
         self.spinbox.valueChanged.connect(self.enable_disable_send)
         self.spinbox.setMinimumWidth(100)
-        self.combo_box.currentIndexChanged.connect(self.update_spinbox_range)
-        self.update_assets(self.assets)
+        self.combo_box.currentIndexChanged.connect(self.combo_box_index_changed)
+        self.update_data(None)
         form_layout.addRow("Amount: ", self.spinbox)
         button_box = QDialogButtonBox()
         button_box.addButton("Reset", QDialogButtonBox.RejectRole)
@@ -282,20 +283,29 @@ class SendAssetWidget(QWidget):
 
     def update_data(self, portfolio):
         self.combo_box.clear()
-        num_assets = len(portfolio.assets)
-        self.combo_box.addItems([a.name for a in portfolio.assets])
+        if portfolio is None:
+            num_assets = 0
+        else:
+            num_assets = len(portfolio.assets)
+            self.combo_box.addItems([a.name for a in portfolio.assets])
+
         self.combo_box.setEnabled(num_assets > 0)
         if num_assets > 0:
             self.combo_box.setCurrentIndex(0)
-        self.assets = assets
-        self.update_spinbox_range()
+        self.update_spinbox_range(portfolio)
 
-    def update_spinbox_range(self):
-        if len(self.assets) > 0:
+    def combo_box_index_changed(self):
+        self.update_spinbox_range(APP.wallet.active_portfolio)
+
+    def update_spinbox_range(self, portfolio):
+        assets = portfolio.assets if portfolio is not None else []
+        if len(assets) > 0:
             current_text = self.combo_box.currentText()
             self.spinbox.setMinimum(0)
             #TODO: bug, spinbox only goes up to 2**31 - 1! is this a problem?
-            self.spinbox.setMaximum(min(MAX_SPINBOX_INT, self.assets[current_text]))
+            amount_in_portfolio = portfolio.amount_for_asset(current_text)
+            assert amount_in_portfolio is not None
+            self.spinbox.setMaximum(min(MAX_SPINBOX_INT, amount_in_portfolio ))
             self.spinbox.setEnabled(True)
         else:
             self.spinbox.setRange(0, 0)
@@ -310,7 +320,7 @@ class SendAssetWidget(QWidget):
         message_box = QMessageBox()
         message_box.setText("Are you sure?")
         message_box.setInformativeText("About to send %d %s to %s.\n\n"
-                                       "his operation cannot be undone." % (self.spinbox.value(),
+                                       "This operation cannot be undone." % (self.spinbox.value(),
                                                                             self.combo_box.currentText(),
                                                                             self.line_edit.text()))
         message_box.setIcon(QMessageBox.Warning)

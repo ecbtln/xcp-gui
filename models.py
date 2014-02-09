@@ -5,7 +5,7 @@
 
 from constants import SATOSHI_CONSTANT, XCP
 #TODO: decide consistent ordering of elements in list for each model
-
+#TODO: use decimals instead of float
 
 class Asset:
     """ Immutable representation of an asset and its properties
@@ -35,7 +35,7 @@ class Portfolio:
     def __init__(self, wallet, address, assets, values):
         assert len(assets) == len(values)
         self.wallet = wallet
-        self.assets = assets  # just the asset names go here
+        self._assets = assets  # just the asset names go here
         for a in assets:
             assert self.get_asset(a) is not None
         # TODO: convert dictionary to object
@@ -49,13 +49,17 @@ class Portfolio:
         return self.wallet.get_asset(asset_name)
 
     def amount_for_asset(self, asset_name):
-        self.amounts.get(asset_name, 0)
+        return self.amounts.get(asset_name, 0)
 
     def owns_asset(self, asset_name):
         asset = self.get_asset(asset_name)
         if asset is None:
             return False
         return self.address == asset.owner
+
+    @property
+    def assets(self):
+        return [self.get_asset(a) for a in self._assets]
 
 
 class Wallet:
@@ -94,7 +98,7 @@ class Wallet:
         address = self.active_address
         if address is None:
             return None
-        return self.portfolios[address]
+        return self.portfolios.get(address, None)
 
 
 

@@ -69,12 +69,12 @@ class XCPClient(object):
 
 if __name__ == '__main__':
     client = XCPClient(port=14000)
-
+    from constants import BTC_ADDRESSES
     # get balances for all assets, including xcp, for a given address
     #print(float(client.xcp_supply()) / 100000000)
     #print(client.get_balances([{'field': 'address', 'op': '==', 'value': BTC_ADDRESSES[0]}]))
-    #print(client.get_balances({"filters": [{'field': 'address', 'op': '==', 'value': x} for x in BTC_ADDRESSES],
-    #                         "filterop": "or"}))
+    print(client.get_balances({"filters": [{'field': 'address', 'op': '==', 'value': x} for x in BTC_ADDRESSES],
+                             "filterop": "or"}))
     #print(client._call_api('get_address', ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf"]))
     print(client.get_issuances())
     print(client.get_asset_info('WEED'))
