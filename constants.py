@@ -1,0 +1,1 @@
+MAX_SPINBOX_INT = (2 ** 31) - 1

@@ -1,4 +1,4 @@
-from xcp_client import XCPClient, BTC_ADDRESS
+from xcp_client import XCPClient, BTC_ADDRESSES
 import threading
 
 class XCPAsyncAppClient(XCPClient):
@@ -16,4 +16,7 @@ class XCPAsyncAppClient(XCPClient):
 
     def get_balances(self, btc_address, callback):
         self._async_api_call('get_balances', [{'field': 'address', 'op': '==', 'value': btc_address}], callback)
+
+    def do_send(self, source, destination, quantity, asset, callback):
+        self._async_api_call('do_send', [source, destination, quantity, asset], callback)
 

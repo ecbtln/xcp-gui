@@ -3,13 +3,23 @@ import sys
 import argparse
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
     QApplication, QDialog, QMainWindow, QComboBox, QSpinBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
-    QTableWidgetItem, QAbstractItemView, QHeaderView
-from xcp_async_app_client import XCPAsyncAppClient, BTC_ADDRESS
+    QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox
+from PyQt5.Qt import QCursor
+from constants import MAX_SPINBOX_INT
+from xcp_async_app_client import XCPAsyncAppClient, BTC_ADDRESSES
 
+#TODO: use list instead of dictionary so that keys are always ordered consistently
 
-# stupid hack to get the global RPCClient
+# stupid hack to get the global RPCClient and some other globals
 class RPC:
+    active_address_index = None
     client = None
+    all_addresses = BTC_ADDRESSES
+
+    @classmethod
+    def active_address(cls):
+        if len(cls.all_addresses) and cls.active_address_index is not None:
+            return cls.all_addresses[cls.active_address_index]
 
 
 class MainWindow(QMainWindow):
@@ -22,16 +32,59 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         self.setGeometry(300, 300, 800, 600)
         self.setWindowTitle('Counterparty Exchange')
-
-        tabWidget = QTabWidget(self)
-        tabWidget.setLayout(QVBoxLayout())
-        tabWidget.resize(750, 475)
-        tabWidget.move(25, 100)
+        central_widget = QWidget(self)
+        central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
+        grid_layout = QGridLayout()
+        tabWidget = QTabWidget()
+        # tabWidget.resize(750, 475)
+        # tabWidget.move(25, 100)
         tabWidget.addTab(CurrencyExchange(), "BTC/XCP Exchange")
-        tabWidget.addTab(AssetExchange(), "My Portfolio")
+        self.asset_exchange = AssetExchange()
+        tabWidget.addTab(self.asset_exchange, "My Portfolio")
+        tabWidget.addTab(QWidget(), "Asset Info") # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM
         tabWidget.addTab(TransactionHistory(), "Transaction History")
-        #self.menuBar().addMenu('Counterparty')
+
+        overview = QGroupBox('Overview')
+        overview.setFixedWidth(250)
+        wallet = MyWalletGroupBox()
+        self.wallet = wallet
+        wallet.combo_box.currentIndexChanged.connect(self.change_selected_address)
+        self.change_selected_address()
+        grid_layout.addWidget(wallet, 0, 1)
+        grid_layout.addWidget(overview, 0, 0)
+        grid_layout.addWidget(tabWidget, 1, 0, 1, 2)
+        central_widget.setLayout(grid_layout)
         self.show()
+
+    def change_selected_address(self):
+        RPC.active_address_index = self.wallet.combo_box.currentIndex()
+        self.asset_exchange.fetch_assets()
+
+
+class MyWalletGroupBox(QGroupBox):
+    def __init__(self):
+        super(QGroupBox, self).__init__('Wallet')
+        self.setFixedHeight(130)
+        self.combo_box = QComboBox()
+        self.combo_box.addItems(RPC.all_addresses)
+        self.combo_box.setCurrentIndex(0)
+        form_layout = QFormLayout()
+        form_layout.addRow("Select an Address: ", self.combo_box)
+        button_box = QDialogButtonBox()
+        export = QPushButton("Export")
+        button_box.addButton(export, QDialogButtonBox.NoRole)
+        copy_address = QPushButton("Copy Address")
+        copy_address.clicked.connect(self.copy_to_clipboard)
+        button_box.addButton(copy_address, QDialogButtonBox.NoRole)
+        new_address = QPushButton("New Address")
+        button_box.addButton(new_address, QDialogButtonBox.ResetRole)
+        form_layout.addRow(button_box)
+        #TODO: fix vertical alignment
+        #form_layout.setAlignment(Qt.)
+        self.setLayout(form_layout)
+
+    def copy_to_clipboard(self):
+        QApplication.clipboard().setText(self.combo_box.currentText())
 
 
 class CurrencyExchange(QWidget):
@@ -60,6 +113,8 @@ class AssetExchange(QWidget):
         self.fetch_assets()
 
     def fetch_assets(self):
+        if RPC.active_address() is None:
+            return
         def process_balances(bals):
             assets = {}
             for entry in bals:
@@ -69,7 +124,7 @@ class AssetExchange(QWidget):
                 v = entry.get('amount', 0)
                 assets[k] = assets.get(k, 0) + v
             self.set_assets(assets)
-        RPC.client.get_balances(BTC_ADDRESS, process_balances) # TODO: this should be a dynamic address
+        RPC.client.get_balances(RPC.active_address(), process_balances) # TODO: this should be a dynamic address
 
     def present_dialog(self):
         dialog = AssetIssueDialog()
@@ -88,6 +143,7 @@ class MyAssetTable(QTableWidget):
         self.verticalHeader().setVisible(False)
         self.setHorizontalHeaderLabels(["Asset", "Amount"])
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.cellDoubleClicked.connect(self.contextMenuEvent)
 
     def update_data(self, assets):
         self.clearContents()
@@ -96,12 +152,36 @@ class MyAssetTable(QTableWidget):
             self.setItem(i, 0, QTableWidgetItem(k))
             self.setItem(i, 1, QTableWidgetItem(str(assets[k])))
 
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        infoAction = QAction('Get Info', self)
+        infoAction.triggered.connect(self.show_asset_info)
+        menu.addAction(infoAction)
+        dividends = QAction('Dividends...', self)
+        dividends.triggered.connect(self.do_dividends)
+        menu.addAction(dividends)
+        callback = QAction('Callback...', self)
+        callback.triggered.connect(self.do_callback)
+        menu.addAction(callback)
+        # add other required actions
+        menu.popup(QCursor.pos())
+
+    def show_asset_info(self):
+        pass
+
+    def do_dividends(self):
+        pass
+
+    def do_callback(self):
+        pass
+
+
 
 
 class AssetIssueDialog(QDialog):
     def __init__(self):
         super(AssetIssueDialog, self).__init__()
-        self.setWindowTitle("Issue Asset for 5 XCP?")
+        self.setWindowTitle("Issue Asset?")
         self.resize(300, 160)
         form_layout = QFormLayout()
         self.setLayout(form_layout)
@@ -111,7 +191,7 @@ class AssetIssueDialog(QDialog):
         spinbox = QSpinBox()
         spinbox.setMinimumWidth(100)
         spinbox.setMinimum(1)
-        spinbox.setMaximum(99999999999999999)
+        spinbox.setMaximum(MAX_SPINBOX_INT)
         form_layout.addRow("Amount: ", spinbox)
         form_layout.addRow("Divisible:", QCheckBox())
         form_layout.addRow("Callable:", QCheckBox())
@@ -139,6 +219,8 @@ class SendAssetWidget(QWidget):
         form_layout = QFormLayout()
         self.setLayout(form_layout)
         self.line_edit = QLineEdit()
+        self.send_button = QPushButton("Send")
+        self.line_edit.textChanged.connect(self.enable_disable_send)
         self.line_edit.setPlaceholderText("Destination address")
         self.line_edit.setFixedWidth(150)
         form_layout.addRow("Pay To: ", self.line_edit)
@@ -146,13 +228,15 @@ class SendAssetWidget(QWidget):
 
         form_layout.addRow("Asset: ", self.combo_box)
         self.spinbox = QSpinBox()
+        self.spinbox.valueChanged.connect(self.enable_disable_send)
         self.spinbox.setMinimumWidth(100)
         self.combo_box.currentIndexChanged.connect(self.update_spinbox_range)
         self.update_assets(self.assets)
         form_layout.addRow("Amount: ", self.spinbox)
         button_box = QDialogButtonBox()
         button_box.addButton("Reset", QDialogButtonBox.RejectRole)
-        button_box.addButton("Send", QDialogButtonBox.AcceptRole)
+
+        button_box.addButton(self.send_button, QDialogButtonBox.AcceptRole)
         form_layout.addRow(button_box)
         button_box.rejected.connect(self.reset_form)
         button_box.accepted.connect(self.submit)
@@ -174,18 +258,34 @@ class SendAssetWidget(QWidget):
 
     def update_spinbox_range(self):
         if len(self.assets) > 0:
-            self.spinbox.setRange(0, self.assets[self.combo_box.currentText()])
+            current_text = self.combo_box.currentText()
+            self.spinbox.setMinimum(0)
+            #TODO: bug, spinbox only goes up to 2**31 - 1! is this a problem?
+            self.spinbox.setMaximum(min(MAX_SPINBOX_INT, self.assets[current_text]))
             self.spinbox.setEnabled(True)
         else:
             self.spinbox.setRange(0, 0)
             self.spinbox.setEnabled(False)
 
+        self.enable_disable_send()
+
+    def enable_disable_send(self):
+        self.send_button.setEnabled(len(self.line_edit.text()) > 0 and self.spinbox.value() > 0)
+
     def submit(self):
-        # asset_name, amount, address
-        print("We should be making a http call to send the $$")
+        message_box = QMessageBox()
+        message_box.setText("Are you sure?")
+        message_box.setInformativeText("About to send %d %s to %s.\n\nThis operation cannot be undone." % (self.spinbox.value(),
+                                                                                                     self.combo_box.currentText(),
+                                                                                                     self.line_edit.text()))
+        message_box.setIcon(QMessageBox.Warning)
+        message_box.addButton("Cancel", QMessageBox.RejectRole)
+        message_box.addButton("Confirm", QMessageBox.AcceptRole)
+        message_box.exec_()
 
 
 class TransactionHistory(QWidget):
+    #TODO: see http://blockscan.com/address.aspx?q=1FwXZu9j2SZKPHJi3eDpzVrySABJChgJL7
     pass
 
 
@@ -193,10 +293,10 @@ def main(argv):
     app = QApplication(argv)
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterparty-gui', description='the GUI app for the counterparty protocol')
-    parser.add_argument('--debug', action='store_true', help="Whether or not to use the testnet when debugging")
+    parser.add_argument('--testnet', action='store_true', help="Whether or not to use the testnet when debugging")
     args = parser.parse_args()
     kwargs = {}
-    if args.debug:
+    if args.testnet:
         kwargs['port'] = 14000
     mw = MainWindow(**kwargs)
     sys.exit(app.exec_())

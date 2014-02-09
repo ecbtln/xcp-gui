@@ -5,7 +5,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from exceptions import InvalidRPCMethod, InvalidRPCArguments, RPCError
 
-BTC_ADDRESS = 'mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th'
+BTC_ADDRESSES = ['mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th', 'mzdtcqgLKR6HiartUL19wD3HRERX7RzELz', 'mwR7RbuNwgwX9cfHKeS7Jgmydn1KtFKH1X']
 
 
 class XCPClient(object):
@@ -63,4 +63,4 @@ if __name__ == '__main__':
 
     # get balances for all assets, including xcp, for a given address
     print(client.xcp_supply())
-    print(client.get_balances({'field': 'address', 'op': '==', 'value': BTC_ADDRESS}))
+    print(client.get_balances({'field': 'address', 'op': '==', 'value': BTC_ADDRESSES[0]}))
