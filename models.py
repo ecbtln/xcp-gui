@@ -7,6 +7,7 @@ from constants import Satoshi, XCP
 from decimal import Decimal as D
 #TODO: decide consistent ordering of elements in list for each model
 
+
 class Asset:
     """ Immutable representation of an asset and its properties
     """
@@ -63,10 +64,13 @@ class Portfolio:
 
 
 class Wallet:
-    def __init__(self, addresses):
+    def __init__(self, addresses=None):
         self.portfolios = {} # map of addresses to portfolios
         self.assets = {} # some portfolios may share the same assets, just point to these, and map asset name, to object for convenience
-        self.addresses = addresses
+        if addresses is None:
+            self.addresses = []
+        else:
+            self.addresses = addresses
         self.active_address_index = None
 
     def update_portfolios(self, all_assets, portfolios):
@@ -86,6 +90,17 @@ class Wallet:
     def get_asset(self, asset_name):
         return self.assets.get(asset_name, None)
 
+    def update_addresses(self, new):
+        old_selected = None if self.active_address_index is None else self.addresses[self.active_address_index]
+        self.addresses = new
+        if old_selected is not None:
+            try:
+                idx = new.index(old_selected)
+            except ValueError:
+                idx = None
+        else:
+            idx = None
+        self.active_address_index = idx
 
     @property
     def active_address(self):

@@ -40,9 +40,10 @@ class AtomicInteger:
         return self.getAndAdd(-1)
 
 
-def display_alert(text, detailed_text):
+def display_alert(text, detailed_text=None):
     message_box = QMessageBox()
     message_box.setIcon(QMessageBox.Information)
     message_box.setText(text)
-    message_box.setDetailedText(detailed_text)
+    if detailed_text:
+        message_box.setDetailedText(detailed_text)
     message_box.exec_()

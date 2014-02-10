@@ -68,5 +68,8 @@ class XCPAsyncAppClient(XCPClient):
 if __name__ == '__main__':
     client = XCPAsyncAppClient(port=14000)
     client.get_assets_info(['IIII', 'WEED'], lambda x: print(x))
-    from constants import BTC_ADDRESSES
+    BTC_ADDRESSES = ['mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th',
+                    'mzdtcqgLKR6HiartUL19wD3HRERX7RzELz',
+                    'mwR7RbuNwgwX9cfHKeS7Jgmydn1KtFKH1X',
+                    'mrutZKJ1XrNdAwLhsKfTUmZwdk1shhsRWw']
     client.get_balances(BTC_ADDRESSES, lambda x: print(x))

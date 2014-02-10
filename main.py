@@ -2,26 +2,33 @@
 import sys
 import argparse
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
-    QApplication, QDialog, QMainWindow, QComboBox, QSpinBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
+    QApplication, QDialog, QMainWindow, QComboBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
     QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.Qt import QCursor
 from PyQt5.QtCore import QRegExp
-from constants import MAX_SPINBOX_INT, XCP, BTC_ADDRESSES, Satoshi
+from constants import XCP
 from xcp_async_app_client import XCPAsyncAppClient
-from models import Wallet, Asset, Portfolio
+from models import Wallet
 from widgets import QAssetValueSpinBox
+from bitcoinrpc.authproxy import AuthServiceProxy
 from utils import display_alert
-import time
+
 
 # stupid hack to get the global RPCClient and some other globals
 class APP:
     rpc_client = None
-    wallet = Wallet(BTC_ADDRESSES)
+    wallet = Wallet()
+    btc_client = AuthServiceProxy("http://bitcoinrpc:PASSWORD@127.0.0.1:18332")
+
+    @classmethod
+    def examine_local_wallet(cls):
+        cls.wallet.update_addresses([x['address'] for x in cls.btc_client.listreceivedbyaddress(0, True)])
 
     @classmethod
     def fetch_initial_data(cls, update_addresses_func):
         wallet = cls.wallet
+        cls.examine_local_wallet()  # use the btc rpc to get the addresses in the wallet
 
         def process_balances(bals):
             portfolios = {}
@@ -62,8 +69,6 @@ class APP:
             cls.rpc_client.get_assets_info(asset_name_list, process_asset_info)
 
         cls.rpc_client.get_balances(wallet.addresses, process_balances)
-        #TODO: here's where we would first get the wallet addresses, but we'll take these for granted
-
 
 class MainWindow(QMainWindow):
     singleton = None
@@ -116,6 +121,7 @@ class MyWalletGroupBox(QGroupBox):
         copy_address.clicked.connect(self.copy_to_clipboard)
         button_box.addButton(copy_address, QDialogButtonBox.NoRole)
         new_address = QPushButton("New Address")
+        new_address.clicked.connect(self.new_address)
         button_box.addButton(new_address, QDialogButtonBox.ResetRole)
         form_layout.addRow(button_box)
         #TODO: fix vertical alignment
@@ -139,6 +145,17 @@ class MyWalletGroupBox(QGroupBox):
 
     def copy_to_clipboard(self):
         QApplication.clipboard().setText(self.combo_box.currentText())
+
+    def new_address(self):
+        address = APP.btc_client.getnewaddress()
+        print("Generated new address: ", address)
+        wallet = APP.wallet
+        old = wallet.addresses
+        old.append(address)
+        wallet.update_addresses(old)
+        self.update_data(old)
+        display_alert("Added new address (%s) to wallet" % address)
+
 
 
 class CurrencyExchange(QWidget):
