@@ -1,0 +1,3 @@
+https://github.com/jgarzik/python-bitcoinrpc
+
+pyqt5

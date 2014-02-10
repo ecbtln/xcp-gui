@@ -1,6 +1,8 @@
 from xcp_client import XCPClient
 import threading
-
+from utils import AtomicInteger, display_alert
+from requests.exceptions import ConnectionError
+from exceptions import InvalidRPCArguments, RPCError
 
 class XCPAsyncAppClient(XCPClient):
     """
@@ -9,9 +11,13 @@ class XCPAsyncAppClient(XCPClient):
     """
     def _async_api_call(self, method, params=None, callback=None):
         def call_api():
+            #TODO: present alert when connection fails
+            #try:
             result = self._call_api(method, params)
             if callback:
                 callback(result)
+            #except (ConnectionError, InvalidRPCArguments, RPCError) as e:
+                #display_alert("Unexpected error", str(e))
 
         threading.Thread(target=call_api).start()
 
@@ -25,28 +31,18 @@ class XCPAsyncAppClient(XCPClient):
     def get_asset_info(self, asset, callback):
         self._async_api_call('get_asset_info', asset, callback)
 
-
     def _call_multiple(self, requests, callback):
         """
         Each element in the requests array is a lambda, that takes in one argument, the callback function
         """
         results = [None] * len(requests)
-        class AtomicInteger:
-            val = len(requests)
-        semaphore = threading.Semaphore()
+        val = AtomicInteger(len(request))
+
         #num_left = len(requests)  # TODO: needs to be atomic integer
         for i, r in enumerate(requests):
             def c_back(j, result):
-
                 results[j] = result
-                semaphore.acquire()
-                done = False
-                AtomicInteger.val -= 1   # TODO: AtomicInteger.decrementAndGet()
-                if AtomicInteger.val == 0:
-                    done = True
-                semaphore.release()
-                #TODO: unlock
-                if done:
+                if val.decrementAndGet() == 0:
                     callback(results)
 
             # this is needed in python to make sure the value of i is copied. Essentially, we wrap the call to c_back

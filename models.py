@@ -3,9 +3,9 @@
 # This means divisible assets are divided by 100,000,000, and indivisible assets are left as is.
 
 
-from constants import SATOSHI_CONSTANT, XCP
+from constants import Satoshi, XCP
+from decimal import Decimal as D
 #TODO: decide consistent ordering of elements in list for each model
-#TODO: use decimals instead of float
 
 class Asset:
     """ Immutable representation of an asset and its properties
@@ -18,15 +18,15 @@ class Asset:
 
     def format_for_api(self, amount):
         if self.divisible:
-            return int(amount * SATOSHI_CONSTANT)
+            return int(D(amount) * Satoshi.CONSTANT)
         else:
-            return amount
+            return int(amount)
 
     def format_for_app(self, amount):
         if self.divisible:
-            return float(amount) / SATOSHI_CONSTANT
+            return D(amount) / Satoshi.CONSTANT
         else:
-            return amount
+            return D(amount)
 
 
 class Portfolio:

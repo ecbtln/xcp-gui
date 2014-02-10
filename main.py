@@ -4,54 +4,24 @@ import argparse
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
     QApplication, QDialog, QMainWindow, QComboBox, QSpinBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
     QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox
+from PyQt5.QtGui import QRegExpValidator
 from PyQt5.Qt import QCursor
-from constants import MAX_SPINBOX_INT, XCP, BTC_ADDRESSES
+from PyQt5.QtCore import QRegExp
+from constants import MAX_SPINBOX_INT, XCP, BTC_ADDRESSES, Satoshi
 from xcp_async_app_client import XCPAsyncAppClient
 from models import Wallet, Asset, Portfolio
-
+from widgets import QAssetValueSpinBox
+from utils import display_alert
+import time
 
 # stupid hack to get the global RPCClient and some other globals
 class APP:
     rpc_client = None
     wallet = Wallet(BTC_ADDRESSES)
 
-
-class MainWindow(QMainWindow):
-    singleton = None
-
-    def __init__(self, *args, **kwargs):
-        super(MainWindow, self).__init__()
-        MainWindow.singleton = self
-        APP.rpc_client = XCPAsyncAppClient(*args, **kwargs)
-        self.init_ui()
-        # needs to be fetched after to ensure UI is loaded
-        self.fetch_initial_data()
-
-    def init_ui(self):
-        self.setGeometry(300, 300, 800, 600)
-        self.setWindowTitle('Counterparty Exchange')
-        central_widget = QWidget(self)
-        central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
-        grid_layout = QGridLayout()
-        tabWidget = QTabWidget()
-        tabWidget.addTab(CurrencyExchange(), "BTC/XCP Exchange")
-        self.asset_exchange = AssetExchange()
-        tabWidget.addTab(self.asset_exchange, "My Portfolio")
-        tabWidget.addTab(QWidget(), "Asset Info (Lookup)")  # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM
-        tabWidget.addTab(TransactionHistory(), "Transaction History")
-
-        overview = QGroupBox('Overview')
-        overview.setFixedWidth(250)
-        wallet_view = MyWalletGroupBox()
-        self.wallet_view = wallet_view
-        grid_layout.addWidget(wallet_view, 0, 1)
-        grid_layout.addWidget(overview, 0, 0)
-        grid_layout.addWidget(tabWidget, 1, 0, 1, 2)
-        central_widget.setLayout(grid_layout)
-        self.show()
-
-    def fetch_initial_data(self):
-        wallet = APP.wallet
+    @classmethod
+    def fetch_initial_data(cls, update_addresses_func):
+        wallet = cls.wallet
 
         def process_balances(bals):
             portfolios = {}
@@ -88,11 +58,46 @@ class MainWindow(QMainWindow):
                                            'assets': assets,
                                            'values': values})
                 wallet.update_portfolios(asset_info_list, new_portfolios)
-                self.wallet_view.update_data(wallet.addresses)
-            APP.rpc_client.get_assets_info(asset_name_list, process_asset_info)
+                update_addresses_func(wallet.addresses)
+            cls.rpc_client.get_assets_info(asset_name_list, process_asset_info)
 
-        APP.rpc_client.get_balances(wallet.addresses, process_balances)
+        cls.rpc_client.get_balances(wallet.addresses, process_balances)
         #TODO: here's where we would first get the wallet addresses, but we'll take these for granted
+
+
+class MainWindow(QMainWindow):
+    singleton = None
+
+    def __init__(self, *args, **kwargs):
+        super(MainWindow, self).__init__()
+        MainWindow.singleton = self
+        APP.rpc_client = XCPAsyncAppClient(*args, **kwargs)
+        self.init_ui()
+        # needs to be fetched after to ensure UI is loaded
+        APP.fetch_initial_data(lambda addresses: self.wallet_view.update_data(addresses))
+
+    def init_ui(self):
+        self.setGeometry(300, 300, 800, 600)
+        self.setWindowTitle('Counterparty Exchange')
+        central_widget = QWidget(self)
+        central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
+        grid_layout = QGridLayout()
+        tabWidget = QTabWidget()
+        tabWidget.addTab(CurrencyExchange(), "BTC/XCP Exchange")
+        self.asset_exchange = AssetExchange()
+        tabWidget.addTab(self.asset_exchange, "My Portfolio")
+        tabWidget.addTab(QWidget(), "Asset Info (Lookup)")  # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM
+        tabWidget.addTab(TransactionHistory(), "Transaction History")
+
+        overview = QGroupBox('Overview')
+        overview.setFixedWidth(250)
+        wallet_view = MyWalletGroupBox()
+        self.wallet_view = wallet_view
+        grid_layout.addWidget(wallet_view, 0, 1)
+        grid_layout.addWidget(overview, 0, 0)
+        grid_layout.addWidget(tabWidget, 1, 0, 1, 2)
+        central_widget.setLayout(grid_layout)
+        self.show()
 
 
 class MyWalletGroupBox(QGroupBox):
@@ -213,8 +218,6 @@ class MyAssetTable(QTableWidget):
         pass
 
 
-
-
 class AssetIssueDialog(QDialog):
     def __init__(self):
         super(AssetIssueDialog, self).__init__()
@@ -223,14 +226,18 @@ class AssetIssueDialog(QDialog):
         form_layout = QFormLayout()
         self.setLayout(form_layout)
         line_edit = QLineEdit()
+        line_edit.setValidator(QRegExpValidator(QRegExp('[a-zA-Z]')))
         line_edit.setPlaceholderText("GOOGL")
-        form_layout.addRow("Asset name:", QLineEdit())
-        spinbox = QSpinBox()
-        spinbox.setMinimumWidth(100)
-        spinbox.setMinimum(1)
-        spinbox.setMaximum(MAX_SPINBOX_INT)
-        form_layout.addRow("Amount: ", spinbox)
-        form_layout.addRow("Divisible:", QCheckBox())
+        line_edit.setFixedWidth(150)
+        form_layout.addRow("Asset name:", line_edit)
+        self.spinbox = QAssetValueSpinBox()
+        self.spinbox.setFixedWidth(150)
+        self.spinbox.setMinimum(1)
+
+        form_layout.addRow("Amount: ", self.spinbox)
+        self.divisible_toggle = QCheckBox()
+        self.divisible_toggle.stateChanged.connect(self.divisible_toggled)
+        form_layout.addRow("Divisible:", self.divisible_toggle)
         form_layout.addRow("Callable:", QCheckBox())
         button_box = QDialogButtonBox()
         button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
@@ -239,6 +246,9 @@ class AssetIssueDialog(QDialog):
         button_box.rejected.connect(self.close)
         button_box.accepted.connect(self.submit)
         self.setSizeGripEnabled(False)
+
+    def divisible_toggled(self):
+        self.spinbox.set_asset_divisible(self.divisible_toggle.isChecked())
 
     def submit(self):
         # , asset_name, callable, divisible, amount
@@ -263,7 +273,7 @@ class SendAssetWidget(QWidget):
         self.combo_box = QComboBox()
 
         form_layout.addRow("Asset: ", self.combo_box)
-        self.spinbox = QSpinBox()
+        self.spinbox = QAssetValueSpinBox()
         self.spinbox.valueChanged.connect(self.enable_disable_send)
         self.spinbox.setMinimumWidth(100)
         self.combo_box.currentIndexChanged.connect(self.combo_box_index_changed)
@@ -299,13 +309,14 @@ class SendAssetWidget(QWidget):
 
     def update_spinbox_range(self, portfolio):
         assets = portfolio.assets if portfolio is not None else []
-        if len(assets) > 0:
+        if len(assets) > 0 and self.combo_box.currentText() != '':
             current_text = self.combo_box.currentText()
             self.spinbox.setMinimum(0)
-            #TODO: bug, spinbox only goes up to 2**31 - 1! is this a problem?
             amount_in_portfolio = portfolio.amount_for_asset(current_text)
             assert amount_in_portfolio is not None
-            self.spinbox.setMaximum(min(MAX_SPINBOX_INT, amount_in_portfolio ))
+            asset = portfolio.get_asset(current_text)
+            self.spinbox.set_asset_divisible(asset.divisible)
+            self.spinbox.setMaximum(amount_in_portfolio)
             self.spinbox.setEnabled(True)
         else:
             self.spinbox.setRange(0, 0)
@@ -319,14 +330,28 @@ class SendAssetWidget(QWidget):
     def submit(self):
         message_box = QMessageBox()
         message_box.setText("Are you sure?")
-        message_box.setInformativeText("About to send %d %s to %s.\n\n"
-                                       "This operation cannot be undone." % (self.spinbox.value(),
-                                                                            self.combo_box.currentText(),
-                                                                            self.line_edit.text()))
+        message_box.setInformativeText("About to send %s %s to %s.\n\n"
+                                       "This operation cannot be undone." % (self.spinbox.text(),
+                                                                             self.combo_box.currentText(),
+                                                                             self.line_edit.text()))
         message_box.setIcon(QMessageBox.Warning)
         message_box.addButton("Cancel", QMessageBox.RejectRole)
         message_box.addButton("Confirm", QMessageBox.AcceptRole)
+        message_box.accepted.connect(self.confirm_send)
         message_box.exec_()
+
+    def confirm_send(self):
+        amount = self.spinbox.text()
+        asset = self.combo_box.currentText()
+        recipient = self.line_edit.text()
+        sender = APP.wallet.active_address
+        amount = APP.wallet.get_asset(asset).format_for_api(amount)
+
+        def success_callback(response):
+            print(response)
+            #display_alert("Transaction completed!", str(response))
+
+        APP.rpc_client.do_send(sender, recipient, amount, asset, success_callback)
 
 
 class TransactionHistory(QWidget):

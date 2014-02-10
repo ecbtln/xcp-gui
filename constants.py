@@ -1,6 +1,14 @@
+from decimal import Decimal as D
+
 MAX_SPINBOX_INT = (2 ** 31) - 1
 XCP = 'XCP'
-SATOSHI_CONSTANT = 100000000
+
+
+class Satoshi:
+    CONSTANT = D(100000000)
+    NUM_DECIMALS = int(CONSTANT.log10())
+    INVERSE = D(1) / CONSTANT
+
 
 #TODO: remove me
 BTC_ADDRESSES = ['mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th',
