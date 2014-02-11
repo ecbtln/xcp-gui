@@ -8,10 +8,10 @@ from PyQt5.QtGui import QRegExpValidator
 from PyQt5.Qt import QCursor
 from PyQt5.QtCore import QRegExp
 from constants import XCP, BTC
-from xcp_async_app_client import XCPAsyncAppClient
+from rpcclient.xcp_async_app_client import XCPAsyncAppClient
 from models import Wallet
 from widgets import QAssetValueSpinBox
-from btc_async_app_client import BTCAsyncAppClient
+from rpcclient.btc_async_app_client import BTCAsyncAppClient
 from utils import display_alert
 
 

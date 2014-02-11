@@ -1,11 +1,11 @@
-from xcp_client import XCPClient
 import threading
-from utils import AtomicInteger, display_alert
 from requests.exceptions import ConnectionError
+from rpcclient.xcp_client import XCPClient
+from utils import AtomicInteger
 from exceptions import InvalidRPCArguments, RPCError
 from callback import CallbackEvent
-import traceback
-
+from rpcclient.common import report_exception
+from constants import XCP
 
 class XCPAsyncAppClient(XCPClient):
     """
@@ -20,10 +20,7 @@ class XCPAsyncAppClient(XCPClient):
                     # perform callback on main thread
                     CallbackEvent.post(lambda: callback(result))
             except (ConnectionError, InvalidRPCArguments, RPCError) as e:
-                # display alert on main thread
-                exception_name = str(e)
-                traceback_info = traceback.format_exc()
-                CallbackEvent.post(lambda: display_alert("Unexpected request error", traceback_info, exception_name))
+                report_exception(XCP, e)
 
         threading.Thread(target=call_api).start()
 
