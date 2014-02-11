@@ -15,7 +15,7 @@ from btc_async_app_client import BTCAsyncAppClient
 from utils import display_alert
 
 
-# stupid hack to get the global RPCClient and some other globals
+# stupid hack to get some globals, its a little ugly, but it works
 class APP:
     xcp_client = None
     wallet = None
@@ -26,6 +26,7 @@ class APP:
     def initialize(cls, **kwargs):
         cls.wallet = Wallet()
         cls.main_window = MainWindow()
+        # TODO: this has to be called after the pointer is created, so that cls.main_window is not None further down in the init_ui call, there must be a better way
         cls.main_window.init_ui()
         cls.xcp_client = XCPAsyncAppClient(**kwargs[XCP])
         cls.btc_client = BTCAsyncAppClient(**kwargs[BTC])
@@ -34,10 +35,15 @@ class APP:
 
     @classmethod
     def examine_local_wallet(cls):
-        cls.wallet.update_addresses([x['address'] for x in cls.btc_client.listreceivedbyaddress(0, True)])
+        cls.btc_client.get_wallet_addresses(lambda res: cls.wallet.update_addresses(res))
 
     @classmethod
     def fetch_initial_data(cls, update_addresses_func):
+        """
+        Fetch the initial data and insert it into our model in the correct format. Because we use callbacks, the
+        appearance of this staircase-like method is a bit hideous, but makes the sense if you look at the bottom first.
+        Since all callbacks are posted to the main thread, there are no concerns of races.
+        """
         wallet = cls.wallet
         cls.examine_local_wallet()  # use the btc rpc to get the addresses in the wallet
 
@@ -153,14 +159,15 @@ class MyWalletGroupBox(QGroupBox):
         QApplication.clipboard().setText(self.combo_box.currentText())
 
     def new_address(self):
-        address = APP.btc_client.getnewaddress()
-        print("Generated new address: ", address)
-        wallet = APP.wallet
-        old = wallet.addresses
-        old.append(address)
-        wallet.update_addresses(old)
-        self.update_data(old)
-        display_alert("Added new address (%s) to wallet" % address)
+        def process_address(address):
+            print("Generated new address: ", address)
+            wallet = APP.wallet
+            old = wallet.addresses
+            old.append(address)
+            wallet.update_addresses(old)
+            self.update_data(old)
+            display_alert("Added new address (%s) to wallet" % address)
+        APP.btc_client.get_new_address(process_address)
 
 
 
