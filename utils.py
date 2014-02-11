@@ -40,10 +40,13 @@ class AtomicInteger:
         return self.getAndAdd(-1)
 
 
-def display_alert(text, detailed_text=None):
+def display_alert(text, detailed_text=None, more_info=None):
     message_box = QMessageBox()
     message_box.setIcon(QMessageBox.Information)
     message_box.setText(text)
     if detailed_text:
         message_box.setDetailedText(detailed_text)
+    message_box.addButton("Dismiss", QMessageBox.AcceptRole)
+    if more_info:
+        message_box.setInformativeText(more_info)
     message_box.exec_()

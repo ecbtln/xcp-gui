@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
         central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
         grid_layout = QGridLayout()
         tabWidget = QTabWidget()
-        tabWidget.addTab(CurrencyExchange(), "BTC/XCP Exchange")
+        tabWidget.addTab(CurrencyExchange(), "Exchange")
         self.asset_exchange = AssetExchange()
         tabWidget.addTab(self.asset_exchange, "My Portfolio")
         tabWidget.addTab(QWidget(), "Asset Info (Lookup)")  # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM

@@ -3,6 +3,9 @@ import threading
 from utils import AtomicInteger, display_alert
 from requests.exceptions import ConnectionError
 from exceptions import InvalidRPCArguments, RPCError
+from callback import CallbackEvent
+import traceback
+
 
 class XCPAsyncAppClient(XCPClient):
     """
@@ -11,13 +14,16 @@ class XCPAsyncAppClient(XCPClient):
     """
     def _async_api_call(self, method, params=None, callback=None):
         def call_api():
-            #TODO: present alert when connection fails
-            #try:
-            result = self._call_api(method, params)
-            if callback:
-                callback(result)
-            #except (ConnectionError, InvalidRPCArguments, RPCError) as e:
-                #display_alert("Unexpected error", str(e))
+            try:
+                result = self._call_api(method, params)
+                if callback:
+                    # perform callback on main thread
+                    CallbackEvent.post(lambda: callback(result))
+            except (ConnectionError, InvalidRPCArguments, RPCError) as e:
+                # display alert on main thread
+                exception_name = str(e)
+                traceback_info = traceback.format_exc()
+                CallbackEvent.post(lambda: display_alert("Unexpected request error", traceback_info, exception_name))
 
         threading.Thread(target=call_api).start()
 
@@ -36,7 +42,7 @@ class XCPAsyncAppClient(XCPClient):
         Each element in the requests array is a lambda, that takes in one argument, the callback function
         """
         results = [None] * len(requests)
-        val = AtomicInteger(len(request))
+        val = AtomicInteger(len(requests))
 
         #num_left = len(requests)  # TODO: needs to be atomic integer
         for i, r in enumerate(requests):
