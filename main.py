@@ -34,8 +34,11 @@ class APP:
         cls.fetch_initial_data(lambda addresses: cls.main_window.wallet_view.update_data(addresses))
 
     @classmethod
-    def examine_local_wallet(cls):
-        cls.btc_client.get_wallet_addresses(lambda res: cls.wallet.update_addresses(res))
+    def examine_local_wallet(cls, after):
+        def cb(res):
+            cls.wallet.update_addresses(res)
+            after()
+        cls.btc_client.get_wallet_addresses(cb)
 
     @classmethod
     def fetch_initial_data(cls, update_addresses_func):
@@ -45,47 +48,48 @@ class APP:
         Since all callbacks are posted to the main thread, there are no concerns of races.
         """
         wallet = cls.wallet
-        cls.examine_local_wallet()  # use the btc rpc to get the addresses in the wallet
 
-        def process_balances(bals):
-            portfolios = {}
-            assets = set()
-            for entry in bals:
-                asset = entry['asset']
-                assets.add(asset)
-                address = entry['address']
-                amount = entry['amount']
-                if address not in portfolios:
-                    portfolios[address] = {}
-                p = portfolios[address]
-                p[asset] = p.get(asset, 0) + amount
-            # don't get_asset_info for XCP, we already know the info and the RCP does not take well with that request
-            if XCP in assets:
-                assets.remove(XCP)
-
-            asset_name_list = list(assets)
-
-            def process_asset_info(asset_info_results):
-
-                asset_info_list = [{'name': asset_name,
-                                    'divisible': res['divisible'],
-                                    'callable': res['callable'],
-                                    'owner': res['owner']} for asset_name, res in zip(asset_name_list,
-                                                                                      asset_info_results)]
-                # now massage the portfolios dictionary to be the desired format of the wallet method
-                new_portfolios = []
-                for address in portfolios:
+        def fetch_data_after_wallet_update():
+            def process_balances(bals):
+                portfolios = {}
+                assets = set()
+                for entry in bals:
+                    asset = entry['asset']
+                    assets.add(asset)
+                    address = entry['address']
+                    amount = entry['amount']
+                    if address not in portfolios:
+                        portfolios[address] = {}
                     p = portfolios[address]
-                    assets = list(p.keys())
-                    values = [p[a] for a in assets]
-                    new_portfolios.append({'address': address,
-                                           'assets': assets,
-                                           'values': values})
-                wallet.update_portfolios(asset_info_list, new_portfolios)
-                update_addresses_func(wallet.addresses)
-            cls.xcp_client.get_assets_info(asset_name_list, process_asset_info)
+                    p[asset] = p.get(asset, 0) + amount
+                # don't get_asset_info for XCP, we already know the info and the RCP does not take well with that request
+                if XCP in assets:
+                    assets.remove(XCP)
 
-        cls.xcp_client.get_balances(wallet.addresses, process_balances)
+                asset_name_list = list(assets)
+
+                def process_asset_info(asset_info_results):
+
+                    asset_info_list = [{'name': asset_name,
+                                        'divisible': res['divisible'],
+                                        'callable': res['callable'],
+                                        'owner': res['owner']} for asset_name, res in zip(asset_name_list,
+                                                                                          asset_info_results)]
+                    # now massage the portfolios dictionary to be the desired format of the wallet method
+                    new_portfolios = []
+                    for address in portfolios:
+                        p = portfolios[address]
+                        assets = list(p.keys())
+                        values = [p[a] for a in assets]
+                        new_portfolios.append({'address': address,
+                                               'assets': assets,
+                                               'values': values})
+                    wallet.update_portfolios(asset_info_list, new_portfolios)
+                    update_addresses_func(wallet.addresses)
+                cls.xcp_client.get_assets_info(asset_name_list, process_asset_info)
+
+            cls.xcp_client.get_balances(wallet.addresses, process_balances)
+        cls.examine_local_wallet(fetch_data_after_wallet_update)
 
 
 class MainWindow(QMainWindow):
@@ -122,6 +126,7 @@ class MyWalletGroupBox(QGroupBox):
         super(QGroupBox, self).__init__('Wallet')
         self.setFixedHeight(130)
         self.combo_box = QComboBox()
+        self.combo_box.setMinimumWidth(330)
         self.combo_box.currentIndexChanged.connect(self.selected_address_changed)
         self.update_data(APP.wallet.addresses)
         form_layout = QFormLayout()
