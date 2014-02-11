@@ -7,19 +7,30 @@ from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton, QForm
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.Qt import QCursor
 from PyQt5.QtCore import QRegExp
-from constants import XCP
+from constants import XCP, BTC
 from xcp_async_app_client import XCPAsyncAppClient
 from models import Wallet
 from widgets import QAssetValueSpinBox
-from bitcoinrpc.authproxy import AuthServiceProxy
+from btc_async_app_client import BTCAsyncAppClient
 from utils import display_alert
 
 
 # stupid hack to get the global RPCClient and some other globals
 class APP:
-    rpc_client = None
-    wallet = Wallet()
-    btc_client = AuthServiceProxy("http://bitcoinrpc:PASSWORD@127.0.0.1:18332")
+    xcp_client = None
+    wallet = None
+    btc_client = None
+    main_window = None
+
+    @classmethod
+    def initialize(cls, **kwargs):
+        cls.wallet = Wallet()
+        cls.main_window = MainWindow()
+        cls.main_window.init_ui()
+        cls.xcp_client = XCPAsyncAppClient(**kwargs[XCP])
+        cls.btc_client = BTCAsyncAppClient(**kwargs[BTC])
+         # needs to be fetched after to ensure UI is loaded
+        cls.fetch_initial_data(lambda addresses: cls.main_window.wallet_view.update_data(addresses))
 
     @classmethod
     def examine_local_wallet(cls):
@@ -66,20 +77,15 @@ class APP:
                                            'values': values})
                 wallet.update_portfolios(asset_info_list, new_portfolios)
                 update_addresses_func(wallet.addresses)
-            cls.rpc_client.get_assets_info(asset_name_list, process_asset_info)
+            cls.xcp_client.get_assets_info(asset_name_list, process_asset_info)
 
-        cls.rpc_client.get_balances(wallet.addresses, process_balances)
+        cls.xcp_client.get_balances(wallet.addresses, process_balances)
+
 
 class MainWindow(QMainWindow):
-    singleton = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         super(MainWindow, self).__init__()
-        MainWindow.singleton = self
-        APP.rpc_client = XCPAsyncAppClient(*args, **kwargs)
-        self.init_ui()
-        # needs to be fetched after to ensure UI is loaded
-        APP.fetch_initial_data(lambda addresses: self.wallet_view.update_data(addresses))
 
     def init_ui(self):
         self.setGeometry(300, 300, 800, 600)
@@ -141,7 +147,7 @@ class MyWalletGroupBox(QGroupBox):
             wallet.active_address_index = None
         else:
             wallet.active_address_index = self.combo_box.currentIndex()
-        MainWindow.singleton.asset_exchange.update_data(wallet.active_portfolio)
+        APP.main_window.asset_exchange.update_data(wallet.active_portfolio)
 
     def copy_to_clipboard(self):
         QApplication.clipboard().setText(self.combo_box.currentText())
@@ -368,7 +374,7 @@ class SendAssetWidget(QWidget):
             print(response)
             #display_alert("Transaction completed!", str(response))
 
-        APP.rpc_client.do_send(sender, recipient, amount, asset, success_callback)
+        APP.xcp_client.do_send(sender, recipient, amount, asset, success_callback)
 
 
 class TransactionHistory(QWidget):
@@ -377,15 +383,18 @@ class TransactionHistory(QWidget):
 
 
 def main(argv):
-    app = QApplication(argv)
+
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterparty-gui', description='the GUI app for the counterparty protocol')
     parser.add_argument('--testnet', action='store_true', help="Whether or not to use the testnet when debugging")
     args = parser.parse_args()
     kwargs = {}
     if args.testnet:
-        kwargs['port'] = 14000
-    mw = MainWindow(**kwargs)
+        kwargs[XCP] = {'port': 14000}
+        kwargs[BTC] = {'port': 18332}
+
+    app = QApplication(argv)
+    APP.initialize(**kwargs)
     sys.exit(app.exec_())
 
 
