@@ -3,7 +3,7 @@ import sys
 import argparse
 from PyQt5.QtWidgets import QWidget, QTabWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
     QApplication, QDialog, QMainWindow, QComboBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
-    QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox
+    QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox, QLabel
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.Qt import QCursor
 from PyQt5.QtCore import QRegExp
@@ -99,6 +99,8 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
         self.setGeometry(300, 300, 800, 600)
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(600)
         self.setWindowTitle('Counterparty Exchange')
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -182,41 +184,92 @@ class MyWalletGroupBox(QGroupBox):
             display_alert("Added new address (%s) to wallet" % address)
         APP.btc_client.get_new_address(process_address)
 
-
-
 class CurrencyExchange(QWidget):
     pass
+
+
+class AssetOwnershipPanel(QGroupBox):
+    def __init__(self):
+        super(AssetOwnershipPanel, self).__init__("Asset Admin Panel")
+        form_layout = QFormLayout()
+        issue_asset_button = QPushButton('Issue New Asset')
+        issue_asset_button.clicked.connect(self.issue_asset)
+        form_layout.addRow(issue_asset_button)
+        self.owned_assets = []
+        self.no_assets = QLabel('The current address does not own the rights to any assets. You may issue an asset above to get started.')
+        self.no_assets.setWordWrap(True)
+        form_layout.addRow(self.no_assets)
+        self.setLayout(form_layout)
+        self.combo_box = QComboBox()
+        button_box = QDialogButtonBox()
+        button_box.addButton("Send Dividends", QDialogButtonBox.ActionRole)
+        button_box.addButton("Callback", QDialogButtonBox.ActionRole)
+        button_box2 = QDialogButtonBox()
+        button_box2.addButton("Transfer", QDialogButtonBox.ActionRole)
+        button_box2.addButton("Issue More", QDialogButtonBox.ActionRole)
+        self.button_box = [button_box, button_box2]
+        self.update_data()
+
+    def issue_asset(self):
+        dialog = AssetIssueDialog()
+        dialog.exec_()
+
+    def update_data(self, portfolio=None):
+        if portfolio is None:
+            assets = []
+        else:
+            assets = portfolio._assets
+        if len(self.owned_assets) > 0 and len(assets) > 0:
+            # keep track of which was highlighted
+            old = self.combo_box.currentText()
+            self.combo_box.clear()
+            self.combo_box.addItems(assets)
+            if old in assets:
+                self.combo_box.setCurrentText(old)
+        else:
+            self.layout().removeWidget(self.combo_box)
+            self.layout().removeWidget(self.no_assets)
+            self.layout().removeWidget(self.button_box[0])
+            self.layout().removeWidget(self.button_box[1])
+
+            if len(assets) > 0:
+                self.combo_box.clear()
+                self.combo_box.addItems(assets)
+                self.layout().addRow(self.combo_box)
+                self.layout().addRow(self.button_box[0])
+                self.layout().addRow(self.button_box[1])
+            else:
+                self.layout().addRow(self.no_assets)
+
+        self.owned_assets = assets
+            # reinitialize the form layout
+
+
+
 
 
 class AssetExchange(QWidget):
     def __init__(self):
         super(AssetExchange, self).__init__()
-
         grid_layout = QGridLayout()
-        send_asset_box = QGroupBox("Send XCP/Asset")
+        send_asset_box = QGroupBox("Send Asset")
+        send_asset_box.setFixedHeight(200)
         vertical_layout = QVBoxLayout()
         self.send_asset_widget = SendAssetWidget()
         vertical_layout.addWidget(self.send_asset_widget)
         send_asset_box.setLayout(vertical_layout)
         grid_layout.addWidget(send_asset_box, 0, 0)
-        misc_box = QGroupBox("Other Actions")
-        issue_asset_button = QPushButton('Issue an Asset', misc_box)
-        do_bet_button = QPushButton('Make Bet', misc_box)
-        do_bet_button.move(25, 75)
-        issue_asset_button.move(25, 25) # TODO: fix this
-        issue_asset_button.clicked.connect(self.present_dialog)
-        grid_layout.addWidget(misc_box, 1, 0)
+        self.ownership_panel = AssetOwnershipPanel()
+        grid_layout.addWidget(AssetOwnershipPanel(), 1, 0)
         self.asset_table = MyAssetTable()
         grid_layout.addWidget(self.asset_table, 0, 1, 2, 1)
+        grid_layout.setColumnStretch(1, 6)
         self.setLayout(grid_layout)
-
-    def present_dialog(self):
-        dialog = AssetIssueDialog()
-        dialog.exec_()
 
     def update_data(self, portfolio):
         self.asset_table.update_data(portfolio)
         self.send_asset_widget.update_data(portfolio)
+        self.ownership_panel.update_data(portfolio)
 
 
 class MyAssetTable(QTableWidget):
@@ -314,11 +367,12 @@ class SendAssetWidget(QWidget):
         self.line_edit.setFixedWidth(150)
         form_layout.addRow("Pay To: ", self.line_edit)
         self.combo_box = QComboBox()
+        self.combo_box.setFixedWidth(150)
 
         form_layout.addRow("Asset: ", self.combo_box)
         self.spinbox = QAssetValueSpinBox()
         self.spinbox.valueChanged.connect(self.enable_disable_send)
-        self.spinbox.setMinimumWidth(100)
+        self.spinbox.setFixedWidth(150)
         self.combo_box.currentIndexChanged.connect(self.combo_box_index_changed)
         self.update_data(None)
         form_layout.addRow("Amount: ", self.spinbox)
