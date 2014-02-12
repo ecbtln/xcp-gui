@@ -27,18 +27,19 @@ class QAssetValueSpinBox(QDoubleSpinBox):
 
 class ShowTransactionDetails(QDialog):
     def __init__(self, text):
-        super(ShowTransactionDetails, self).__init__(text)
+        super(ShowTransactionDetails, self).__init__()
         text_edit = QTextEdit()
-        text_edit.setText(text)
+        text_edit.setText("<b>Response</b>: %s" % text)
         self.setWindowTitle("Details")
         button_box = QDialogButtonBox()
         button_box.addButton("Close", QDialogButtonBox.AcceptRole)
         layout = QVBoxLayout()
-        layout.addItem(text_edit)
-        layout.addItem(button_box)
+        layout.addWidget(text_edit)
+        layout.addWidget(button_box)
         self.setMinimumHeight(180)
         self.setLayout(layout)
         button_box.clicked.connect(self.close)
+
 
 class AssetLineEdit(QLineEdit):
     def __init__(self, *args, **kwargs):

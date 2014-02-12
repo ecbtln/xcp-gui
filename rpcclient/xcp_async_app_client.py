@@ -69,6 +69,31 @@ class XCPAsyncAppClient(XCPClient):
     def do_send(self, source, destination, quantity, asset, callback):
         self._async_api_call('do_send', [source, destination, quantity, asset], callback)
 
+    def do_issuance(self, source, quantity, asset, divisible, description, callable=False, call_date=None, call_price=None, callback=None):
+        info = {'source': source,
+                'quantity': quantity,
+                'asset': asset,
+                'divisible': int(divisible),
+                'description': description}
+        if callable:
+            info.update({'callable': int(callable),
+                         'call_date': call_date,
+                         'call_price': call_price})
+
+        self._async_api_call('do_issuance', info, callback)
+
+    def do_transfer_issuance(self, source, asset, divisible, transfer_destination, callback):
+        self._async_api_call('do_issuance', {'source': source,
+                                             'quantity': 0,
+                                             'asset': asset,
+                                             'divisible': int(divisible),
+                                             'transfer_destination': transfer_destination}, callback)
+
+    def do_dividend(self, source, quantity_per_unit, asset, callback):
+        self._async_api_call('do_dividend', [source, quantity_per_unit, asset], callback)
+
+    #def do_callback(self, source, asset, fraction_per):
+
     def get_orders(self, btc_addresses, callback):
         self._async_api_call('get_orders', {'filters': [{'field': 'source',
                                                          'op': '==',

@@ -1,9 +1,12 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
-    QDialog,  QComboBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
-    QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox, QLabel, QApplication
-from PyQt5.Qt import QCursor
+    QDialog,  QComboBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, QCalendarWidget, \
+    QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox, QLabel, QApplication, QPlainTextEdit,\
+    QDoubleSpinBox
+from PyQt5.Qt import QCursor, QTextCursor
+from PyQt5.QtCore import QDateTime
 from widgets import QAssetValueSpinBox, ShowTransactionDetails, AssetLineEdit
-
+from constants import MAX_BYTES_ASSET_DESCRIPTION, MAX_SPINBOX_INT, MIN_LENGTH_ASSET_NAME
+from models import Asset
 
 class AssetOwnershipPanel(QGroupBox):
     def __init__(self):
@@ -133,36 +136,104 @@ class AssetIssueDialog(QDialog):
         super(AssetIssueDialog, self).__init__()
         self.setWindowTitle("Issue Asset?")
         self.resize(300, 160)
-        form_layout = QFormLayout()
-        self.setLayout(form_layout)
-        line_edit = AssetLineEdit()
 
-        line_edit.setFixedWidth(150)
-        form_layout.addRow("Asset name:", line_edit)
+
+        self.line_edit = AssetLineEdit()
+        self.line_edit.textChanged.connect(self.processAssetNameChange)
+        self.setToolTip("Issue a new asset")
+
+        self.line_edit.setFixedWidth(150)
+
         self.spinbox = QAssetValueSpinBox()
         self.spinbox.setFixedWidth(150)
         self.spinbox.setMinimum(1)
+        self.line_edit.setToolTip("The asset to issue")
+        self.spinbox.setToolTip("The amount of the asset to issue")
 
-        form_layout.addRow("Amount: ", self.spinbox)
+
+        self.asset_description = QPlainTextEdit()
+        self.asset_description.textChanged.connect(self.processChangedText)
+        self.asset_description.setToolTip("A textual description for the asset")
+
         self.divisible_toggle = QCheckBox()
+        self.divisible_toggle.setToolTip("Whether this asset is divisible or not")
         self.divisible_toggle.stateChanged.connect(self.divisible_toggled)
-        form_layout.addRow("Divisible:", self.divisible_toggle)
-        form_layout.addRow("Callable:", QCheckBox())
+
+        self.callable_toggle = QCheckBox()
+        #self.callable_toggle.stateChanged.connect(self.regenerate_form)
+
+        self.callable_toggle.setToolTip("Whether the asset is callable or not.")
         button_box = QDialogButtonBox()
         button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
-        button_box.addButton("Issue Asset", QDialogButtonBox.AcceptRole)
-        form_layout.addRow(button_box)
+        self.issue_button = QPushButton("Issue Asset")
+        button_box.addButton(self.issue_button, QDialogButtonBox.AcceptRole)
+        self.issue_button.setEnabled(False)
         button_box.rejected.connect(self.close)
         button_box.accepted.connect(self.submit)
+        self.button_box = button_box
         self.setSizeGripEnabled(False)
+        self.call_date = QCalendarWidget()
+        self.call_date.setSelectionMode(QCalendarWidget.SingleSelection)
+        self.call_date.setHorizontalHeaderFormat(QCalendarWidget.SingleLetterDayNames)
+        self.call_date.setToolTip("The timestamp at which the asset may be called back, in Unix time. Only valid for callable assets.")
+        self.call_price = QDoubleSpinBox()
+        self.call_price.setMinimum(0)
+        self.call_price.setMaximum(MAX_SPINBOX_INT)
+        self.call_price.setToolTip("The price at which the asset may be called back, on the specified call_date.")
+        self.regenerate_form()
+
+    def regenerate_form(self):
+
+        form_layout = QFormLayout()
+        form_layout.addRow("Asset name:", self.line_edit)
+        form_layout.addRow("Amount: ", self.spinbox)
+        form_layout.addRow("Description: ", self.asset_description)
+        form_layout.addRow("Divisible:", self.divisible_toggle)
+        form_layout.addRow("Callable:", self.callable_toggle)
+        # TODO: add support for these to be toggled on the callable toggle
+        #if self.callable_toggle.isChecked():
+        form_layout.addRow("Call Date: ", self.call_date)
+        form_layout.addRow("Call Price: ", self.call_price)
+        form_layout.addRow(self.button_box)
+        self.setLayout(form_layout)
+
 
     def divisible_toggled(self):
         self.spinbox.set_asset_divisible(self.divisible_toggle.isChecked())
 
     def submit(self):
-        # , asset_name, callable, divisible, amount
-        print("We should be making a http call!")
-        self.close()
+        source = QApplication.instance().wallet.active_address
+        divisible = self.divisible_toggle.isChecked()
+        callable = self.callable_toggle.isChecked()
+        asset = self.line_edit.text()
+        description = self.asset_description.toPlainText()
+        a = Asset(asset, divisible, callable, source)
+        quantity = a.format_for_api(self.spinbox.value())
+        if callable:
+            call_price = self.call_price.value()
+            call_date = self.call_date.selectedDate()
+            datetime = QDateTime(call_date)
+            datetime = datetime.toMSecsSinceEpoch() / 1000
+        else:
+            call_price = None
+            datetime = None
+
+        def success_callback(response):
+            print(response)
+            ShowTransactionDetails(response).exec_()
+            self.close()
+
+        QApplication.instance().xcp_client.do_issuance(source, quantity, asset, divisible, description, callable, datetime, call_price, success_callback)
+
+
+    def processChangedText(self):
+        string = self.asset_description.toPlainText()
+        if len(string) > MAX_BYTES_ASSET_DESCRIPTION:
+            self.asset_description.setPlainText(string[:MAX_BYTES_ASSET_DESCRIPTION])
+            self.asset_description.moveCursor(QTextCursor.End)
+
+    def processAssetNameChange(self):
+        self.issue_button.setEnabled(len(self.line_edit.text()) >= MIN_LENGTH_ASSET_NAME)
 
 
 class SendAssetWidget(QWidget):

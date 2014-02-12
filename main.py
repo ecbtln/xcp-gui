@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
 
         overview = QGroupBox('Overview')
         refresh = QPushButton("Refresh", overview)
-        refresh.clicked.connect(QApplication.instance().fetch_initial_data)
+        refresh.clicked.connect(self.fetch_initial_data)
         overview.setFixedWidth(250)
         wallet_view = MyWalletGroupBox(self)
         self.wallet_view = wallet_view
@@ -45,6 +45,12 @@ class MainWindow(QMainWindow):
         grid_layout.addWidget(tabWidget, 1, 0, 1, 2)
         central_widget.setLayout(grid_layout)
         self.show()
+
+    def fetch_initial_data_lambda(self):
+        return lambda results: self.wallet_view.update_data(results)
+
+    def fetch_initial_data(self):
+        QApplication.instance().fetch_initial_data(self.fetch_initial_data_lambda())
 
     def initialize_data_in_tabs(self):
         """
@@ -130,7 +136,7 @@ def main(argv):
     app = XCPApplication(argv, options=options)
     mw = MainWindow()
     def callback(results):
-        mw.wallet_view.update_data(results)
+        mw.fetch_initial_data_lambda()(results)
         mw.initialize_data_in_tabs()
     app.fetch_initial_data(callback)
     sys.exit(app.exec_())
