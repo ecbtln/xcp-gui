@@ -69,6 +69,19 @@ class XCPAsyncAppClient(XCPClient):
     def do_send(self, source, destination, quantity, asset, callback):
         self._async_api_call('do_send', [source, destination, quantity, asset], callback)
 
+    def get_orders(self, btc_addresses, callback):
+        self._async_api_call('get_orders', {'filters': [{'field': 'source',
+                                                         'op': '==',
+                                                         'value': x} for x in btc_addresses],
+                                            'filterop': 'or',
+                                            'show_expired': False,
+                                            'order_by': 'block_index',
+                                            'order_dir': 'desc'}, callback)
+
+    def get_order_matches(self, callback):
+        self._async_api_call('get_order_matches', {'is_mine': True,
+                                                   'order_by': 'block_index',
+                                                   'order_dir': 'desc'}, callback)
 if __name__ == '__main__':
     client = XCPAsyncAppClient(port=14000)
     client.get_assets_info(['IIII', 'WEED'], lambda x: print(x))

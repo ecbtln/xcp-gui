@@ -1,5 +1,7 @@
-from PyQt5.QtWidgets import QDoubleSpinBox, QDialog, QTextEdit, QDialogButtonBox, QVBoxLayout
+from PyQt5.QtWidgets import QDoubleSpinBox, QDialog, QTextEdit, QDialogButtonBox, QVBoxLayout, QLineEdit
 from constants import Satoshi, MAX_SPINBOX_INT
+from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtCore import QRegExp
 
 class QAssetValueSpinBox(QDoubleSpinBox):
     """
@@ -25,6 +27,7 @@ class QAssetValueSpinBox(QDoubleSpinBox):
 
 class ShowTransactionDetails(QDialog):
     def __init__(self, text):
+        super(ShowTransactionDetails, self).__init__(text)
         text_edit = QTextEdit()
         text_edit.setText(text)
         self.setWindowTitle("Details")
@@ -36,3 +39,9 @@ class ShowTransactionDetails(QDialog):
         self.setMinimumHeight(180)
         self.setLayout(layout)
         button_box.clicked.connect(self.close)
+
+class AssetLineEdit(QLineEdit):
+    def __init__(self, *args, **kwargs):
+        super(AssetLineEdit, self).__init__(*args, **kwargs)
+        self.setValidator(QRegExpValidator(QRegExp('[a-zA-Z]*')))
+        self.setPlaceholderText("GOOGL")

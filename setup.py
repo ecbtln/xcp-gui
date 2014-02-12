@@ -9,7 +9,7 @@
 # If everything works well you should find a subdirectory in the build
 # subdirectory that contains the files needed to run the application
 
-application_title = "XCP-GUI"  # what you want to application to be called
+application_title = "XCP-Qt"  # what you want to application to be called
 main_python_file = "main.py"  # the name of the python file you use to run the program
 
 import sys

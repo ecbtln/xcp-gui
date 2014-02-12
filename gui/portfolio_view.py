@@ -1,10 +1,8 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
     QDialog,  QComboBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, \
     QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox, QLabel, QApplication
-from PyQt5.QtGui import QRegExpValidator
 from PyQt5.Qt import QCursor
-from PyQt5.QtCore import QRegExp
-from widgets import QAssetValueSpinBox, ShowTransactionDetails
+from widgets import QAssetValueSpinBox, ShowTransactionDetails, AssetLineEdit
 
 
 class AssetOwnershipPanel(QGroupBox):
@@ -137,9 +135,8 @@ class AssetIssueDialog(QDialog):
         self.resize(300, 160)
         form_layout = QFormLayout()
         self.setLayout(form_layout)
-        line_edit = QLineEdit()
-        line_edit.setValidator(QRegExpValidator(QRegExp('[a-zA-Z]')))
-        line_edit.setPlaceholderText("GOOGL")
+        line_edit = AssetLineEdit()
+
         line_edit.setFixedWidth(150)
         form_layout.addRow("Asset name:", line_edit)
         self.spinbox = QAssetValueSpinBox()

@@ -1,4 +1,3 @@
-
 import sys
 import argparse
 from PyQt5.QtWidgets import QWidget, QTabWidget, QPushButton, QFormLayout, QApplication, QMainWindow, \
@@ -8,6 +7,7 @@ from utils import display_alert
 from application import XCPApplication
 from gui.portfolio_view import MyPortfolio
 from gui.asset_exchange_view import AssetExchange
+
 
 class MainWindow(QMainWindow):
 
@@ -26,7 +26,8 @@ class MainWindow(QMainWindow):
         #central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
         grid_layout = QGridLayout()
         tabWidget = QTabWidget()
-        tabWidget.addTab(AssetExchange(), "Exchange")
+        self.asset_exchange = AssetExchange()
+        tabWidget.addTab(self.asset_exchange, "Exchange")
         self.my_portfolio = MyPortfolio()
         tabWidget.addTab(self.my_portfolio, "My Portfolio")
         tabWidget.addTab(QWidget(), "Asset Info (Lookup)")  # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM
@@ -44,6 +45,12 @@ class MainWindow(QMainWindow):
         grid_layout.addWidget(tabWidget, 1, 0, 1, 2)
         central_widget.setLayout(grid_layout)
         self.show()
+
+    def initialize_data_in_tabs(self):
+        """
+        Called after the initial request is done populating addresses into the wallet
+        """
+        self.asset_exchange.fetch_data()
 
 
 class MyWalletGroupBox(QGroupBox):
@@ -122,7 +129,10 @@ def main(argv):
 
     app = XCPApplication(argv, options=options)
     mw = MainWindow()
-    app.fetch_initial_data(lambda x: mw.wallet_view.update_data(x))
+    def callback(results):
+        mw.wallet_view.update_data(results)
+        mw.initialize_data_in_tabs()
+    app.fetch_initial_data(callback)
     sys.exit(app.exec_())
 
 
