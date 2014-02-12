@@ -7,6 +7,7 @@ from callback import CallbackEvent
 from rpcclient.common import report_exception
 from constants import XCP
 
+
 class XCPAsyncAppClient(XCPClient):
     """
     A subclass of the XCPClient that defines methods, with restricted parameters and asynchronous callbacks

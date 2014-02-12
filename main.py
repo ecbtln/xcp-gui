@@ -31,7 +31,7 @@ class APP:
         cls.xcp_client = XCPAsyncAppClient(**kwargs[XCP])
         cls.btc_client = BTCAsyncAppClient(**kwargs[BTC])
          # needs to be fetched after to ensure UI is loaded
-        cls.fetch_initial_data(lambda addresses: cls.main_window.wallet_view.update_data(addresses))
+        cls.fetch_initial_data()
 
     @classmethod
     def examine_local_wallet(cls, after):
@@ -41,7 +41,7 @@ class APP:
         cls.btc_client.get_wallet_addresses(cb)
 
     @classmethod
-    def fetch_initial_data(cls, update_addresses_func):
+    def fetch_initial_data(cls):
         """
         Fetch the initial data and insert it into our model in the correct format. Because we use callbacks, the
         appearance of this staircase-like method is a bit hideous, but makes the sense if you look at the bottom first.
@@ -85,7 +85,7 @@ class APP:
                                                'assets': assets,
                                                'values': values})
                     wallet.update_portfolios(asset_info_list, new_portfolios)
-                    update_addresses_func(wallet.addresses)
+                    cls.main_window.wallet_view.update_data(wallet.addresses)
                 cls.xcp_client.get_assets_info(asset_name_list, process_asset_info)
 
             cls.xcp_client.get_balances(wallet.addresses, process_balances)
@@ -100,17 +100,22 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         self.setGeometry(300, 300, 800, 600)
         self.setWindowTitle('Counterparty Exchange')
-        central_widget = QWidget(self)
-        central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        #central_widget.setGeometry(0, 0, self.width(), self.height())  # TODO, this should scale if the window is resized
         grid_layout = QGridLayout()
         tabWidget = QTabWidget()
         tabWidget.addTab(CurrencyExchange(), "Exchange")
         self.asset_exchange = AssetExchange()
         tabWidget.addTab(self.asset_exchange, "My Portfolio")
         tabWidget.addTab(QWidget(), "Asset Info (Lookup)")  # TODO: see http://blockscan.com/assetinfo.aspx?q=ETHEREUM
+        tabWidget.addTab(QWidget(), "Broadcast/Bet")
         tabWidget.addTab(TransactionHistory(), "Transaction History")
 
         overview = QGroupBox('Overview')
+        refresh = QPushButton("Refresh", overview)
+        refresh.clicked.connect(APP.fetch_initial_data)
         overview.setFixedWidth(250)
         wallet_view = MyWalletGroupBox()
         self.wallet_view = wallet_view
@@ -124,7 +129,7 @@ class MainWindow(QMainWindow):
 class MyWalletGroupBox(QGroupBox):
     def __init__(self):
         super(QGroupBox, self).__init__('Wallet')
-        self.setFixedHeight(130)
+        self.setFixedHeight(110)
         self.combo_box = QComboBox()
         self.combo_box.setMinimumWidth(330)
         self.combo_box.currentIndexChanged.connect(self.selected_address_changed)
@@ -146,10 +151,13 @@ class MyWalletGroupBox(QGroupBox):
         self.setLayout(form_layout)
 
     def update_data(self, addresses):
+        old = self.combo_box.currentText()
         self.combo_box.clear()
         if len(addresses) > 0:
             self.combo_box.addItems(addresses)
             self.combo_box.setCurrentIndex(0)
+            if old in addresses:
+                self.combo_box.setCurrentText(old)
         self.selected_address_changed()
 
     def selected_address_changed(self):
@@ -384,6 +392,7 @@ class SendAssetWidget(QWidget):
 
         def success_callback(response):
             print(response)
+            #TODO:
             #display_alert("Transaction completed!", str(response))
 
         APP.xcp_client.do_send(sender, recipient, amount, asset, success_callback)

@@ -3,7 +3,7 @@ from decimal import Decimal as D
 MAX_SPINBOX_INT = (2 ** 31) - 1
 XCP = 'XCP'
 BTC = 'BTC'
-
+BTC_CONNECTION_TIMEOUT = 2
 
 class Satoshi:
     CONSTANT = D(100000000)

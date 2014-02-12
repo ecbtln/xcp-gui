@@ -2,6 +2,7 @@ from callback import CallbackEvent
 from utils import display_alert
 import traceback
 
+
 def report_exception(client_name, e):
     # display alert on main thread
     exception_name = str(e)
