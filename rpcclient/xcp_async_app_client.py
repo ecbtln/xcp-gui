@@ -92,6 +92,9 @@ class XCPAsyncAppClient(XCPClient):
     def do_dividend(self, source, quantity_per_unit, asset, callback):
         self._async_api_call('do_dividend', [source, quantity_per_unit, asset], callback)
 
+    def do_order(self, source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required,
+                 fee_provided, callback):
+        self._async_api_call('do_order', [source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required, fee_provided], callback)
     #def do_callback(self, source, asset, fraction_per):
 
     def get_orders(self, btc_addresses, callback):

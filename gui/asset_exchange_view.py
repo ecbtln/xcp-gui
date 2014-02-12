@@ -148,21 +148,24 @@ class PlaceOrderDialog(QDialog):
     def __init__(self, *args, **kwargs):
         super(PlaceOrderDialog, self).__init__(*args, **kwargs)
         self.setWindowTitle("Place Order for Asset")
+        self.setToolTip("Issue an order request.")
         form_layout = QFormLayout()
         self.give_combo_box = QComboBox()
-        self.give_combo_box.setToolTip("The amount of the asset to give")
+        self.give_combo_box.setToolTip("The asset to give")
         self.wallet = QApplication.instance().wallet
         active_portfolio = self.wallet.active_portfolio
         assets = active_portfolio.assets if active_portfolio is not None else []
         self.give_combo_box.addItems([a.name for a in assets])
         self.give_value_box = QAssetValueSpinBox()
-
+        self.give_value_box.setToolTip("The amount of the asset to give")
         form_layout.addRow("Give Asset: ", self.give_combo_box)
         form_layout.addRow("Give Quantity: ", self.give_value_box)
         self.give_combo_box.currentIndexChanged.connect(self.give_combo_box_value_changed)
         self.give_combo_box_value_changed()
         self.get_asset = AssetLineEdit()
+        self.get_asset.setToolTip("The asset request in return")
         self.get_combo_box = QAssetValueSpinBox()
+        self.get_combo_box.setToolTip("The quantity of the asset request in return")
         self.get_combo_box.set_asset_divisible(False)
         self.get_combo_box.setRange(0, MAX_SPINBOX_INT)
         form_layout.addRow("Get Asset: ", self.get_asset)
@@ -170,17 +173,24 @@ class PlaceOrderDialog(QDialog):
 
 
         self.expiration = QAssetValueSpinBox()
+        self.expiration.setToolTip("The number of blocks for which the order should be valid.")
         self.expiration.set_asset_divisible(False)
         self.expiration.setRange(1, MAX_SPINBOX_INT)
         form_layout.addRow("Expiration: ", self.expiration)
 
 
         self.fee_required = QAssetValueSpinBox()
+        self.fee_required.setToolTip("The miners' fee required to be paid by orders for "
+                                     "them to match this one; in BTC; required only if "
+                                     "buying BTC (may be zero, though).")
+
         self.fee_required.set_asset_divisible(True)
         self.fee_required.setRange(0, MAX_SPINBOX_INT)
         form_layout.addRow("Fee Required: ", self.fee_required)
 
         self.fee_provided = QAssetValueSpinBox()
+        self.fee_provided.setToolTip("The miners' fee provided; in BTC; required only if selling BTC "
+                                     "(should not be lower than is required for acceptance in a block)")
         self.fee_provided.set_asset_divisible(True)
         self.fee_provided.setRange(0, MAX_SPINBOX_INT)
         form_layout.addRow("Fee Provided: ", self.fee_provided)
