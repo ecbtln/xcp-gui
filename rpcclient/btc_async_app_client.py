@@ -23,7 +23,7 @@ class BTCAsyncAppClient(AuthServiceProxy):
         threading.Thread(target=call_api).start()
 
     def get_wallet_addresses(self, callback):
-        self._async_call('listreceivedbyaddress', lambda res: callback([x['address'] for x in res]), 0, True)
+        self._async_call('listreceivedbyaddress', lambda res: callback([x['address'] for x in res]), 0, False)
 
     def get_new_address(self, callback):
         self._async_call('getnewaddress', callback)
