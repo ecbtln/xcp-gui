@@ -95,6 +95,13 @@ class XCPAsyncAppClient(XCPClient):
     def do_order(self, source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required,
                  fee_provided, callback):
         self._async_api_call('do_order', [source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required, fee_provided], callback)
+
+    def do_cancel(self, offer_hash, callback):
+        self._async_api_call('do_cancel', [offer_hash], callback)
+
+
+    def do_btcpay(self, order_match_id, callback):
+        self._async_api_call('do_btcpay', [order_match_id], callback)
     #def do_callback(self, source, asset, fraction_per):
 
     def get_orders(self, btc_addresses, callback):

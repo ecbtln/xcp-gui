@@ -3,7 +3,7 @@
 # This means divisible assets are divided by 100,000,000, and indivisible assets are left as is.
 
 
-from constants import Satoshi, XCP
+from constants import Satoshi, XCP, BTC
 from decimal import Decimal as D
 #TODO: decide consistent ordering of elements in list for each model
 
@@ -79,6 +79,7 @@ class Wallet:
         self.assets = {a['name']: Asset(**a) for a in all_assets}
         # this asset is fixed and should always be available for reference
         self.assets[XCP] = Asset(XCP, True, False, None)
+        self.assets[BTC] = Asset(BTC, True, False, None)
         self.portfolios = {}
         for p in portfolios:
             p['wallet'] = self

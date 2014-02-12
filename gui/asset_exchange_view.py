@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QTableWidget, QAbstractItemView, QGroupBox,
     QDialogButtonBox, QPushButton, QHeaderView, QTableWidgetItem, QApplication, QDialog, QFormLayout, QComboBox, QLineEdit
 from constants import BTC, MAX_SPINBOX_INT
 from models import Asset
-from widgets import QAssetValueSpinBox, AssetLineEdit
+from widgets import QAssetValueSpinBox, AssetLineEdit, ShowTransactionDetails
 
 
 class AssetExchange(QWidget):
@@ -155,7 +155,9 @@ class PlaceOrderDialog(QDialog):
         self.wallet = QApplication.instance().wallet
         active_portfolio = self.wallet.active_portfolio
         assets = active_portfolio.assets if active_portfolio is not None else []
-        self.give_combo_box.addItems([a.name for a in assets])
+        asset_names = [a.name for a in assets]
+        asset_names.append(BTC)
+        self.give_combo_box.addItems(asset_names)
         self.give_value_box = QAssetValueSpinBox()
         self.give_value_box.setToolTip("The amount of the asset to give")
         form_layout.addRow("Give Asset: ", self.give_combo_box)
@@ -204,12 +206,35 @@ class PlaceOrderDialog(QDialog):
         button_box.accepted.connect(self.submit)
         self.setLayout(form_layout)
 
+#def do_order(self, source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required,
+ #                fee_provided, callback):
     def submit(self):
-        print("Form submitted!")
+        give_asset = self.give_combo_box.currentText()
+        give_quantity =  QApplication.instance().wallet.get_asset(give_asset).format_for_api(self.give_value_box.value())
+        get_quantity = int(self.get_combo_box.value())
+        get_asset = self.get_asset.text()
+        expiration = int(self.expiration.value())
+        a = Asset(BTC, True, False, None)
+        fee_required = a.format_for_api(self.fee_required.value())
+        fee_provided = a.format_for_api(self.fee_provided.value())
+
+        source = QApplication.instance().wallet.active_address
+
+        def success_callback(response):
+            print(response)
+            ShowTransactionDetails(response).exec_()
+            self.close()
+
+        QApplication.instance().xcp_client.do_order(source, give_quantity, give_asset, get_quantity, get_asset,
+                                                    expiration, fee_required, fee_provided, success_callback)
+
 
     def give_combo_box_value_changed(self):
         a = self.give_combo_box.currentText()
-        max = self.wallet.active_portfolio.amount_for_asset(a)
+        if a == BTC:
+            max = MAX_SPINBOX_INT
+        else:
+            max = self.wallet.active_portfolio.amount_for_asset(a)
         asset_obj = self.wallet.get_asset(a)
         divisible = asset_obj and asset_obj.divisible
         self.give_value_box.set_asset_divisible(divisible)
@@ -224,6 +249,7 @@ class CancelOrderDialog(QDialog):
         form_layout = QFormLayout()
 
         self.offer_hash = QLineEdit()
+        self.offer_hash.textChanged.connect(self.textChanged)
         self.offer_hash.setToolTip("The transaction hash of the order or bet.")
         self.setToolTip("Cancel an open order or bet you created.")
         form_layout.addRow("Offer Hash: ", self.offer_hash)
@@ -231,14 +257,24 @@ class CancelOrderDialog(QDialog):
         button_box = QDialogButtonBox()
         button_box.addButton("Undo", QDialogButtonBox.RejectRole)
 
-        button_box.addButton("Submit Request", QDialogButtonBox.AcceptRole)
+        self.submit_button = QPushButton("Submit Request")
+        button_box.addButton(self.submit_button, QDialogButtonBox.AcceptRole)
         form_layout.addRow(button_box)
         button_box.rejected.connect(self.close)
         button_box.accepted.connect(self.submit)
         self.setLayout(form_layout)
+        self.textChanged()
 
     def submit(self):
+        def success_callback(response):
+            print(response)
+            ShowTransactionDetails(response).exec_()
+            self.close()
+        QApplication.instance().xcp_client.do_cancel(self.offer_hash.text(), success_callback)
         print("Form submitted!")
+
+    def textChanged(self):
+        self.submit_button.setEnabled(len(self.offer_hash.text()) > 0)
 
 
 class BTCPayDialog(QDialog):
@@ -249,20 +285,30 @@ class BTCPayDialog(QDialog):
         form_layout = QFormLayout()
 
         self.offer_hash = QLineEdit()
+        self.offer_hash.textChanged.connect(self.textChanged)
         self.offer_hash.setToolTip("The concatenation of the hashes of the two transactions which compose the order match.")
         self.setToolTip("Create and broadcast a BTCpay message, to settle an Order Match for which you owe BTC.")
         form_layout.addRow("Order Match ID: ", self.offer_hash)
 
         button_box = QDialogButtonBox()
         button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
-
-        button_box.addButton("Pay", QDialogButtonBox.AcceptRole)
+        self.submit_button = QPushButton("Pay")
+        button_box.addButton(self.submit_button, QDialogButtonBox.AcceptRole)
         form_layout.addRow(button_box)
         button_box.rejected.connect(self.close)
         button_box.accepted.connect(self.submit)
         self.setLayout(form_layout)
+        self.textChanged()
+
+    def textChanged(self):
+        self.submit_button.setEnabled(len(self.offer_hash.text()) > 0)
 
     def submit(self):
+        def success_callback(response):
+            print(response)
+            ShowTransactionDetails(response).exec_()
+            self.close()
+        QApplication.instance().xcp_client.do_btcpay(self.offer_hash.text(), success_callback)
         print("Form submitted!")
 
 
