@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
     QDialog,  QComboBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, QCalendarWidget, \
-    QTableWidgetItem, QAbstractItemView, QHeaderView, QAction, QMenu, QMessageBox, QLabel, QApplication, QPlainTextEdit,\
+    QTableWidgetItem, QAbstractItemView, QHeaderView, QMessageBox, QLabel, QApplication, QPlainTextEdit,\
     QDoubleSpinBox
-from PyQt5.Qt import QCursor, QTextCursor
+from PyQt5.Qt import QTextCursor
 from PyQt5.QtCore import QDateTime
 from widgets import QAssetValueSpinBox, ShowTransactionDetails, AssetLineEdit
 from constants import MAX_BYTES_ASSET_DESCRIPTION, MAX_SPINBOX_INT, MIN_LENGTH_ASSET_NAME
@@ -190,8 +190,8 @@ class AssetIssueDialog(QDialog):
             datetime = QDateTime(call_date)
             datetime = int(datetime.toMSecsSinceEpoch() / 1000)
         else:
-            call_price = None
-            datetime = None
+            call_price = 0
+            datetime = 0
 
         def success_callback(response):
             print(response)

@@ -14,6 +14,7 @@ class XCPApplication(QApplication):
         self.wallet = Wallet()
         self.xcp_client = XCPAsyncAppClient()
         self.btc_client = BTCAsyncAppClient()
+        self.LAST_BLOCK = None
 
     def examine_local_wallet(self, after):
         def cb(res):

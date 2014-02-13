@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import QWidget, QTableWidget, QAbstractItemView, QGroupBox, QVBoxLayout,\
-    QDialogButtonBox, QPushButton, QHeaderView, QTableWidgetItem, QApplication, QDialog, QFormLayout, QComboBox, QLineEdit
+    QDialogButtonBox, QPushButton, QHeaderView, QTableWidgetItem, QApplication, QDialog, QFormLayout, QComboBox, \
+    QLineEdit, QAction
 from constants import BTC, MAX_SPINBOX_INT
 from models import Asset
 from widgets import QAssetValueSpinBox, AssetLineEdit, ShowTransactionDetails
 from .asset_info_view import AssetInfoView
+
 
 class AssetExchange(QWidget):
     def __init__(self, *args, **kwargs):
@@ -12,30 +14,30 @@ class AssetExchange(QWidget):
         glob_vbox_layout = QVBoxLayout()
         place_new_order = QPushButton("Place Order")
         # TODO: present new page with a way to filter all orders, and sort, by stock, by price, etc
-        lookup_orders = QPushButton("Filter Orders")
+        # lookup_orders = QPushButton("Filter Orders")
         do_btc_pay = QPushButton("BTC Pay")
         cancel_order = QPushButton("Cancel Order")
-        asset_lookup = QPushButton("Lookup Asset")
+        # asset_lookup = QPushButton("Lookup Asset")
         button_box = QDialogButtonBox()
         button_box.addButton(place_new_order, QDialogButtonBox.NoRole)
         button_box.addButton(do_btc_pay, QDialogButtonBox.NoRole)
         button_box.addButton(cancel_order, QDialogButtonBox.NoRole)
-        button_box.addButton(asset_lookup,QDialogButtonBox.ActionRole)
-        button_box.addButton(lookup_orders, QDialogButtonBox.ActionRole)
+        # button_box.addButton(asset_lookup,QDialogButtonBox.ActionRole)
+        # button_box.addButton(lookup_orders, QDialogButtonBox.ActionRole)
 
         place_new_order.clicked.connect(self.place_order)
         cancel_order.clicked.connect(self.cancel_order)
         do_btc_pay.clicked.connect(self.do_btc_pay)
-        asset_lookup.clicked.connect(self.lookup_asset)
+        # asset_lookup.clicked.connect(self.lookup_asset)
 
         glob_vbox_layout.addWidget(button_box)
         vbox_layout = QVBoxLayout()
-        group_box = QGroupBox('Open Orders')
+        group_box = QGroupBox('Open Orders (Double click to cancel)')
         self.open_orders = OpenOrdersTableView()
         vbox_layout.addWidget(self.open_orders)
         group_box.setLayout(vbox_layout)
         glob_vbox_layout.addWidget(group_box)
-        group_box = QGroupBox('Order Matches')
+        group_box = QGroupBox('Order Matches (Pending BTCPay)')
         vbox_layout = QVBoxLayout()
         self.order_matches = OrderMatchesTableView()
         vbox_layout.addWidget(self.order_matches)
@@ -67,7 +69,7 @@ class AssetExchange(QWidget):
         app = QApplication.instance()
         def callback(matched_orders):
             self.order_matches.setRowCount(len(matched_orders))
-
+            self.order_matches.data = matched_orders
             for i, o in enumerate(matched_orders):
                 self.order_matches.setItem(i, 0, QTableWidgetItem('%d' % o['tx0_index']))
                 forward_asset = o['forward_asset']
@@ -88,6 +90,7 @@ class AssetExchange(QWidget):
         app = QApplication.instance()
         addresses = app.wallet.addresses
         def callback(orders):
+            self.open_orders.data = orders
             self.open_orders.setRowCount(len(orders))
 
             for i, o in enumerate(orders):
@@ -115,6 +118,7 @@ class AssetExchange(QWidget):
 class OrderMatchesTableView(QTableWidget):
     def __init__(self, *args):
         super(OrderMatchesTableView, self).__init__(*args)
+        self.data = None
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.verticalHeader().setVisible(False)
         cols = ["Tx0", "Tx0_address", "Forward Asset", "Tx1", "Tx1_address", "Backward asset", "Validity"]
@@ -122,6 +126,9 @@ class OrderMatchesTableView(QTableWidget):
         self.setHorizontalHeaderLabels(cols) #
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.data = None
+
 
 
 class OpenOrdersTableView(QTableWidget):
@@ -134,6 +141,18 @@ class OpenOrdersTableView(QTableWidget):
         self.setHorizontalHeaderLabels(cols) #
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.cellDoubleClicked.connect(self.doubleClickedCell)
+        self.data = None
+
+    def doubleClickedCell(self, row, col):
+        el = self.data[row]
+        hash = el['tx_hash']
+        CancelOrderDialog(hash).exec_()
+
+
+
+
 
 
 # class CancelledOrdersTableView(QTableWidget):
@@ -245,13 +264,15 @@ class PlaceOrderDialog(QDialog):
 
 
 class CancelOrderDialog(QDialog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, tx_hash=None, *args, **kwargs):
         super(CancelOrderDialog, self).__init__(*args, **kwargs)
         self.setWindowTitle("Cancel Order for Asset")
 
         form_layout = QFormLayout()
 
         self.offer_hash = QLineEdit()
+        if tx_hash:
+            self.offer_hash.setText(tx_hash)
         self.offer_hash.textChanged.connect(self.textChanged)
         self.offer_hash.setToolTip("The transaction hash of the order or bet.")
         self.setToolTip("Cancel an open order or bet you created.")

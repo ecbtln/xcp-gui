@@ -9,11 +9,12 @@ from counterpartyd.lib import util
 #from counterpartyd import counterpartyd
 import threading
 from rpcclient.xcp_client import XCPClient
-from constants import GUI_VERSION
+from constants import GUI_VERSION, BTC_CONNECTION_TIMEOUT
 import appdirs
 import configparser
 import os
 import exceptions
+import time
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
@@ -242,7 +243,7 @@ def main(argv):
         import urllib.request
         import traceback
 
-        client = AuthServiceProxy(url_for_client(), timeout=3)
+        client = AuthServiceProxy(url_for_client(), timeout=BTC_CONNECTION_TIMEOUT)
 
         try:
             current_count = client.getblockcount()
@@ -308,7 +309,8 @@ def main(argv):
         from utils import display_alert
         splashScreen.close()
         info, exc = failure_message[0]
-        display_alert(info, more_info=exc)
+        from rpcclient.common import report_exception
+        display_alert(info, exc)
     else:
         mw = MainWindow()
 
@@ -319,7 +321,25 @@ def main(argv):
         app.fetch_initial_data(callback)
 
         splashScreen.finish(mw)
-        sys.exit(app.exec())
+        mw.KEEP_ALIVE = True # boolean to signal the end of the thread right before the process closes
+        #app.LAST_BLOCK = None # variable that we check against the results of the last block check every time to see if
+        # any new blocks have been added
+        def auto_updating_thread():
+            while mw.KEEP_ALIVE:
+                time.sleep(5)
+                client = XCPClient()
+                block = client.get_running_info()['last_block']['block_index']
+
+                # any time we find a new block in the block chain, trigger a UI refresh
+                if app.LAST_BLOCK is None or block > app.LAST_BLOCK:
+                    app.LAST_BLOCK = block
+                    app.fetch_initial_data(callback)
+        t = threading.Thread(target=auto_updating_thread)
+        t.start()
+        res = app.exec()
+        mw.KEEP_ALIVE = False
+        t.join()
+        sys.exit(res)
 
 
 if __name__ == '__main__':

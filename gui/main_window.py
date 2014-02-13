@@ -28,9 +28,7 @@ class MainWindow(QMainWindow):
         tabWidget.addTab(TransactionHistory(), "Transaction History")
 
         overview = QGroupBox('Overview')
-        refresh = QPushButton("Refresh", overview)
-        refresh.move(50, 50)
-        refresh.clicked.connect(self.fetch_initial_data)
+
         overview.setFixedWidth(250)
         wallet_view = MyWalletGroupBox(self)
         self.wallet_view = wallet_view

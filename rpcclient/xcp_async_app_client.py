@@ -5,8 +5,7 @@ from utils import AtomicInteger
 from exceptions import InvalidRPCArguments, RPCError
 from callback import CallbackEvent
 from rpcclient.common import report_exception
-from constants import XCP
-
+from constants import XCP, BTC
 
 class XCPAsyncAppClient(XCPClient):
     """
@@ -75,10 +74,9 @@ class XCPAsyncAppClient(XCPClient):
                 'asset': asset,
                 'divisible': int(divisible),
                 'description': description,
-                'callable': int(callable)}
-        if callable:
-            info.update({'call_date': call_date,
-                         'call_price': call_price})
+                'callable': int(callable),
+                'call_date': call_date,
+                'call_price': call_price}
 
         self._async_api_call('do_issuance', info, callback)
 
@@ -117,6 +115,13 @@ class XCPAsyncAppClient(XCPClient):
         self._async_api_call('get_order_matches', {'is_mine': True,
                                                    'order_by': 'block_index',
                                                    'order_dir': 'desc'}, callback)
+
+    def get_btcpay_order_matches(self, callback):
+        self._async_api_call('get_order_matches', {'is_mine': True,
+                                                   'order_by': 'block_index',
+                                                   'order_dir': 'desc',
+                                                   'filters':[{'field': 'forward_asset', 'op': '==', 'value': BTC},
+                                                              {'field': 'backward_asset', 'op': '==', 'value': BTC}]}, callback)
 if __name__ == '__main__':
     client = XCPAsyncAppClient(port=14000)
     client.get_assets_info(['IIII', 'WEED'], lambda x: print(x))

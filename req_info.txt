@@ -1,5 +1,4 @@
 https://github.com/jgarzik/python-bitcoinrpc
 sip==4.15.4(http://www.riverbankcomputing.com/software/sip/download)
 PyQt5==5.1
-PyInstaller==2.1
 cx_Freeze
