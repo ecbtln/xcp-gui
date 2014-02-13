@@ -31,6 +31,14 @@ are reproduced below.
 To run the program, simply run `python gui.py` from the command line. The usage is the same as the usage for the
 `counterpartyd.py` script, with a few exceptions.
 
+
+For example, a simple command setting the appropriate RPC usernames and passwords is:
+
+```python gui.py --rpc-user=rpcuser --rpc-password=rpcpassword --bitcoind-rpc-password=PASSWORD --testnet```
+
+To initialize the counterpartyd submodule once pulled run this from without the git directory:
+```git submodule init```
+
 * Since the app is responsible for both the GUI and and the counterpartyd server, the RPC password is no longer required in configuration,
 and the GUI will automatically choose one to give to both the server and the GUI.
 * There is one additional configuration parameter, ``--no-counterpartyd``, that allows the GUI to be run without also

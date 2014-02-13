@@ -218,7 +218,6 @@ def main(argv):
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
-    parser.add_argument('--headless', action='store_true', default=False, help='assume headless operation, don\'t ask for wallet passphrase')
     parser.add_argument('--no-counterpartyd', action='store_true', default=False, help='assume headless operation, e.g. don\'t ask for wallet passhrase')
 
 
@@ -228,7 +227,7 @@ def main(argv):
     set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
                 bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
                 rpc_user=args.rpc_user, rpc_password=args.rpc_password or ('PASSWORD' if not args.no_counterpartyd else None), log_file=args.log_file, database_file=args.database_file, testnet=args.testnet,
-                testcoin=args.testcoin, headless=args.headless, start_server=not args.no_counterpartyd)
+                testcoin=args.testcoin, headless=True, start_server=not args.no_counterpartyd)
 
 
     app = XCPApplication(argv)
