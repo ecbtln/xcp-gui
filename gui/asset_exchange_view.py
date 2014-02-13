@@ -176,6 +176,7 @@ class OpenOrdersTableView(QTableWidget):
 #         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 #         self.verticalHeader().setVisible(False)
 
+
 class PlaceOrderDialog(QDialog):
     def __init__(self, asset, *args, **kwargs):
         super(PlaceOrderDialog, self).__init__(*args, **kwargs)

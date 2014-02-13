@@ -45,6 +45,7 @@ class XCPClient(object):
         data = json.dumps(payload)
         print("Request URL: %s. Data: %s. Headers: %s" % (self.url, data, self.headers))
         response = requests.post(self.url, data=data, headers=self.headers, auth=self.auth)
+        print(response)
         if response:
             js = response.json()
             if 'result' in js:
