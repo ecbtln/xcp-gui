@@ -218,7 +218,7 @@ def main(argv):
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
     parser.add_argument('--headless', action='store_true', default=False, help='assume headless operation, e.g. don’t ask for wallet passhrase')
-    parser.add_argument('--no_web_server', action='store_true', default=False, help='assume headless operation, e.g. don’t ask for wallet passhrase')
+    parser.add_argument('--no-counterpartyd', action='store_true', default=False, help='assume headless operation, e.g. don’t ask for wallet passhrase')
 
 
     args = parser.parse_args()
@@ -226,8 +226,8 @@ def main(argv):
     # Configuration
     set_options(data_dir=args.data_dir, bitcoind_rpc_connect=args.bitcoind_rpc_connect, bitcoind_rpc_port=args.bitcoind_rpc_port,
                 bitcoind_rpc_user=args.bitcoind_rpc_user, bitcoind_rpc_password=args.bitcoind_rpc_password, rpc_host=args.rpc_host, rpc_port=args.rpc_port,
-                rpc_user=args.rpc_user, rpc_password=args.rpc_password or 'PASSWORD', log_file=args.log_file, database_file=args.database_file, testnet=args.testnet,
-                testcoin=args.testcoin, headless=args.headless, start_server=not args.no_web_server)
+                rpc_user=args.rpc_user, rpc_password=args.rpc_password or ('PASSWORD' if not args.no_counterpartyd else None), log_file=args.log_file, database_file=args.database_file, testnet=args.testnet,
+                testcoin=args.testcoin, headless=args.headless, start_server=not args.no_counterpartyd)
 
 
     app = XCPApplication(argv)
@@ -251,7 +251,7 @@ def main(argv):
             failure_message.append(("Could not connect to bitcoin", traceback.format_exc()))
             return
 
-        splashScreen.bar.setValue(25) # step 1 of 5 complete
+#        splashScreen.bar.setValue(25) # step 1 of 5 complete
 
         splashScreen.showMessage("Verifying blockchain up to date")
         if config.TESTNET:
@@ -276,11 +276,12 @@ def main(argv):
                 failure_message.append((str(e), traceback.format_exc()))
                 return
 
-        splashScreen.bar.setValue(50) # step 2 of 5 complete
+#        splashScreen.bar.setValue(50) # step 2 of 5 complete
         from counterpartyd.lib import api
         from counterpartyd.lib import blocks
 
         if config.START_RPC_SERVER:
+            splashScreen.showMessage("Starting counterpartyd")
             db = util.connect_to_db()
             api_server = api.APIServer()
             api_server.daemon = True
@@ -288,10 +289,11 @@ def main(argv):
             # fork off in another thread
             t = threading.Thread(target=lambda: blocks.follow(db))
             t.start()
-
-            splashScreen.bar.setValue(75)
+            time.sleep(10)
+ #           splashScreen.bar.setValue(75)
             # we've now started up the webserver, finally just wait until the db is in a good state
             while True:
+                splashScreen.showMessage("Catching up the counterpartyd blockchain")
                 client = XCPClient()
                 try:
                     if client.get_running_info()['db_caught_up']:
@@ -328,12 +330,17 @@ def main(argv):
             while mw.KEEP_ALIVE:
                 time.sleep(5)
                 client = XCPClient()
-                block = client.get_running_info()['last_block']['block_index']
+                try:
+                    block = client.get_running_info()['last_block']['block_index']
 
-                # any time we find a new block in the block chain, trigger a UI refresh
-                if app.LAST_BLOCK is None or block > app.LAST_BLOCK:
-                    app.LAST_BLOCK = block
-                    app.fetch_initial_data(callback)
+                    # any time we find a new block in the block chain, trigger a UI refresh
+                    if app.LAST_BLOCK is None or block > app.LAST_BLOCK:
+                        app.LAST_BLOCK = block
+                        app.fetch_initial_data(callback)
+                except Exception as e:
+                    print(e)
+                    time.sleep(10)  # sleep a little extra before continuing
+
         t = threading.Thread(target=auto_updating_thread)
         t.start()
         res = app.exec()

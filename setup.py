@@ -8,12 +8,11 @@
 #
 # If everything works well you should find a subdirectory in the build
 # subdirectory that contains the files needed to run the application
-from constants import APP_NAME
+from constants import APP_NAME, GUI_VERSION
 application_title = APP_NAME  # what you want to application to be called
-main_python_file = "main.py"  # the name of the python file you use to run the program
+main_python_file = "gui.py"  # the name of the python file you use to run the program
 
 import sys
-
 from cx_Freeze import setup, Executable
 
 base = None
@@ -23,7 +22,7 @@ if sys.platform == "win32":
 includes = ["atexit", "re"]
 
 setup(name=application_title,
-      version="0.1",
-      description="Sample cx_Freeze PyQt4 script",
+      version=GUI_VERSION,
+      description="Counterpart cross-platform gui client",
       options={"build_exe": {"includes": includes}},
       executables=[Executable(main_python_file, base=base)])
