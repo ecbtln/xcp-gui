@@ -35,7 +35,7 @@ class AssetExchange(QWidget):
         vbox_layout.addWidget(self.open_orders)
         group_box.setLayout(vbox_layout)
         glob_vbox_layout.addWidget(group_box)
-        group_box = QGroupBox('Order Matches (Double click to BTCPay)')
+        group_box = QGroupBox('Order Matches')
         vbox_layout = QVBoxLayout()
         self.order_matches = OrderMatchesTableView()
         vbox_layout.addWidget(self.order_matches)

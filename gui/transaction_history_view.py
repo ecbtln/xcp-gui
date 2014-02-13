@@ -1,4 +1,4 @@
-from PyQt5.Qt import QWidget
+from PyQt5.QtWidgets import QWidget
 
 
 class TransactionHistory(QWidget):
