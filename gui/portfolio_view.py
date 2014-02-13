@@ -97,7 +97,7 @@ class MyAssetTable(QTableWidget):
         self.verticalHeader().setVisible(False)
         self.setHorizontalHeaderLabels(["Asset", "Amount"])
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.cellDoubleClicked.connect(self.contextMenuEvent)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
     def update_data(self, portfolio):
         self.clearContents()
@@ -107,36 +107,12 @@ class MyAssetTable(QTableWidget):
             self.setItem(i, 0, QTableWidgetItem(a.name))
             self.setItem(i, 1, QTableWidgetItem(str(portfolio.amount_for_asset(a.name))))
 
-    def contextMenuEvent(self, event):
-        menu = QMenu(self)
-        infoAction = QAction('Get Info', self)
-        infoAction.triggered.connect(self.show_asset_info)
-        menu.addAction(infoAction)
-        dividends = QAction('Dividends...', self)
-        dividends.triggered.connect(self.do_dividends)
-        menu.addAction(dividends)
-        callback = QAction('Callback...', self)
-        callback.triggered.connect(self.do_callback)
-        menu.addAction(callback)
-        # add other required actions
-        menu.popup(QCursor.pos())
-
-    def show_asset_info(self):
-        pass
-
-    def do_dividends(self):
-        pass
-
-    def do_callback(self):
-        pass
-
 
 class AssetIssueDialog(QDialog):
     def __init__(self):
         super(AssetIssueDialog, self).__init__()
         self.setWindowTitle("Issue Asset?")
         self.resize(300, 160)
-
 
         self.line_edit = AssetLineEdit()
         self.line_edit.textChanged.connect(self.processAssetNameChange)
@@ -197,23 +173,22 @@ class AssetIssueDialog(QDialog):
         form_layout.addRow(self.button_box)
         self.setLayout(form_layout)
 
-
     def divisible_toggled(self):
         self.spinbox.set_asset_divisible(self.divisible_toggle.isChecked())
 
     def submit(self):
         source = QApplication.instance().wallet.active_address
-        divisible = self.divisible_toggle.isChecked()
-        callable = self.callable_toggle.isChecked()
+        divisible = bool(self.divisible_toggle.isChecked())
+        callable = bool(self.callable_toggle.isChecked())
         asset = self.line_edit.text()
         description = self.asset_description.toPlainText()
         a = Asset(asset, divisible, callable, source)
         quantity = a.format_for_api(self.spinbox.value())
         if callable:
-            call_price = self.call_price.value()
+            call_price = int(self.call_price.value())
             call_date = self.call_date.selectedDate()
             datetime = QDateTime(call_date)
-            datetime = datetime.toMSecsSinceEpoch() / 1000
+            datetime = int(datetime.toMSecsSinceEpoch() / 1000)
         else:
             call_price = None
             datetime = None

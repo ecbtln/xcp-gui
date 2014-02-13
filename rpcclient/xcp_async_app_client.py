@@ -74,10 +74,10 @@ class XCPAsyncAppClient(XCPClient):
                 'quantity': quantity,
                 'asset': asset,
                 'divisible': int(divisible),
-                'description': description}
+                'description': description,
+                'callable': int(callable)}
         if callable:
-            info.update({'callable': int(callable),
-                         'call_date': call_date,
+            info.update({'call_date': call_date,
                          'call_price': call_price})
 
         self._async_api_call('do_issuance', info, callback)
@@ -124,4 +124,3 @@ if __name__ == '__main__':
                     'mzdtcqgLKR6HiartUL19wD3HRERX7RzELz',
                     'mwR7RbuNwgwX9cfHKeS7Jgmydn1KtFKH1X',
                     'mrutZKJ1XrNdAwLhsKfTUmZwdk1shhsRWw']
-    client.get_balances(BTC_ADDRESSES, lambda x: print(x))

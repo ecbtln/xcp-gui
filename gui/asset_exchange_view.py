@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QTableWidget, QAbstractItemView, QGroupBox,
 from constants import BTC, MAX_SPINBOX_INT
 from models import Asset
 from widgets import QAssetValueSpinBox, AssetLineEdit, ShowTransactionDetails
-
+from .asset_info_view import AssetInfoView
 
 class AssetExchange(QWidget):
     def __init__(self, *args, **kwargs):
@@ -15,16 +15,18 @@ class AssetExchange(QWidget):
         lookup_orders = QPushButton("Filter Orders")
         do_btc_pay = QPushButton("BTC Pay")
         cancel_order = QPushButton("Cancel Order")
+        asset_lookup = QPushButton("Lookup Asset")
         button_box = QDialogButtonBox()
         button_box.addButton(place_new_order, QDialogButtonBox.NoRole)
-
         button_box.addButton(do_btc_pay, QDialogButtonBox.NoRole)
         button_box.addButton(cancel_order, QDialogButtonBox.NoRole)
+        button_box.addButton(asset_lookup,QDialogButtonBox.ActionRole)
         button_box.addButton(lookup_orders, QDialogButtonBox.ActionRole)
 
         place_new_order.clicked.connect(self.place_order)
         cancel_order.clicked.connect(self.cancel_order)
         do_btc_pay.clicked.connect(self.do_btc_pay)
+        asset_lookup.clicked.connect(self.lookup_asset)
 
         glob_vbox_layout.addWidget(button_box)
         vbox_layout = QVBoxLayout()
@@ -57,6 +59,10 @@ class AssetExchange(QWidget):
         btc_pay_ui = BTCPayDialog()
         btc_pay_ui.exec_()
 
+    def lookup_asset(self, asset=None):
+        info_view = AssetInfoView(asset)
+        info_view.exec_()
+
     def fetch_matched_orders(self):
         app = QApplication.instance()
         def callback(matched_orders):
@@ -78,9 +84,6 @@ class AssetExchange(QWidget):
                 self.order_matches.setItem(i, 6, QTableWidgetItem(o['validity']))
         app.xcp_client.get_order_matches(callback)
 
-
-
-
     def fetch_open_orders(self):
         app = QApplication.instance()
         addresses = app.wallet.addresses
@@ -97,16 +100,17 @@ class AssetExchange(QWidget):
                 give_amount = str(give_asset_obj.format_for_app(o['give_amount']))
                 self.open_orders.setItem(i, 1, QTableWidgetItem('%s %s' % (get_amount, get_asset)))
                 self.open_orders.setItem(i, 2, QTableWidgetItem('%s %s' % (give_amount, give_asset)))
-                self.open_orders.setItem(i, 3, QTableWidgetItem('%.5f %s/%s' % (o['price'], give_asset, get_asset)))
+                self.open_orders.setItem(i, 3, QTableWidgetItem('%.2f %s/%s' % (float(give_amount)/float(get_amount), give_asset, get_asset)))
                 self.open_orders.setItem(i, 4, QTableWidgetItem('%d' % (o['block_index'] + o['expiration'])))
                 a = Asset(BTC, True, False, '')
                 self.open_orders.setItem(i, 5, QTableWidgetItem(str(a.format_for_app(o['fee_required']))))
                 self.open_orders.setItem(i, 6, QTableWidgetItem(str(a.format_for_app(o['fee_provided']))))
-                self.open_orders.setItem(i, 7, QTableWidgetItem('%s %s remain' %
+                self.open_orders.setItem(i, 7, QTableWidgetItem('%s %s' %
                                                     (give_asset_obj.format_for_app(o['give_remaining']), give_asset)))
 
 
         app.xcp_client.get_orders(addresses, callback)
+
 
 class OrderMatchesTableView(QTableWidget):
     def __init__(self, *args):
@@ -115,8 +119,9 @@ class OrderMatchesTableView(QTableWidget):
         self.verticalHeader().setVisible(False)
         cols = ["Tx0", "Tx0_address", "Forward Asset", "Tx1", "Tx1_address", "Backward asset", "Validity"]
         self.setColumnCount(len(cols))
-        self.setHorizontalHeaderLabels(cols), #
+        self.setHorizontalHeaderLabels(cols) #
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
 
 class OpenOrdersTableView(QTableWidget):
@@ -126,22 +131,23 @@ class OpenOrdersTableView(QTableWidget):
         self.verticalHeader().setVisible(False)
         cols = ["Tx", "Buy", "Sell", "Price", "Expiration", "Fee prov", "Fee req", "Remaining"]
         self.setColumnCount(len(cols))
-        self.setHorizontalHeaderLabels(cols), #
+        self.setHorizontalHeaderLabels(cols) #
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
 
-class CancelledOrdersTableView(QTableWidget):
-    def __init__(self, *args):
-        super(CancelledOrdersTableView, self).__init__(*args)
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.verticalHeader().setVisible(False)
-
-
-class CompletedOrdersTableView(QTableWidget):
-    def __init__(self, *args):
-        super(CompletedOrdersTableView, self).__init__(*args)
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.verticalHeader().setVisible(False)
+# class CancelledOrdersTableView(QTableWidget):
+#     def __init__(self, *args):
+#         super(CancelledOrdersTableView, self).__init__(*args)
+#         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+#         self.verticalHeader().setVisible(False)
+#
+#
+# class CompletedOrdersTableView(QTableWidget):
+#     def __init__(self, *args):
+#         super(CompletedOrdersTableView, self).__init__(*args)
+#         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+#         self.verticalHeader().setVisible(False)
 
 
 class PlaceOrderDialog(QDialog):
@@ -206,8 +212,6 @@ class PlaceOrderDialog(QDialog):
         button_box.accepted.connect(self.submit)
         self.setLayout(form_layout)
 
-#def do_order(self, source, give_quantity, give_asset, get_quantity, get_asset, expiration, fee_required,
- #                fee_provided, callback):
     def submit(self):
         give_asset = self.give_combo_box.currentText()
         give_quantity =  QApplication.instance().wallet.get_asset(give_asset).format_for_api(self.give_value_box.value())
@@ -227,7 +231,6 @@ class PlaceOrderDialog(QDialog):
 
         QApplication.instance().xcp_client.do_order(source, give_quantity, give_asset, get_quantity, get_asset,
                                                     expiration, fee_required, fee_provided, success_callback)
-
 
     def give_combo_box_value_changed(self):
         a = self.give_combo_box.currentText()
