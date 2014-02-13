@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFormLayout, QLineEdit, QCheckBox, \
     QDialog,  QComboBox, QDialogButtonBox, QGridLayout, QGroupBox, QTableWidget, QCalendarWidget, \
-    QTableWidgetItem, QAbstractItemView, QHeaderView, QMessageBox, QLabel, QApplication, QPlainTextEdit,\
+    QTableWidgetItem, QAbstractItemView, QHeaderView, QMessageBox, QApplication, QPlainTextEdit,\
     QDoubleSpinBox
 from PyQt5.Qt import QTextCursor
 from PyQt5.QtCore import QDateTime
@@ -36,10 +36,10 @@ class MyPortfolio(QWidget):
 class AssetOwnershipPanel(QGroupBox):
     def __init__(self):
         super(AssetOwnershipPanel, self).__init__("Asset Admin Panel")
-        layout = QVBoxLayout()
+        layout = QFormLayout()
         issue_asset_button = QPushButton('Issue New Asset')
         issue_asset_button.clicked.connect(self.issue_asset)
-        layout.addWidget(issue_asset_button)
+        layout.addRow(issue_asset_button)
         self.owned_assets = []
         self.setLayout(layout)
         self.asset_select = QComboBox()
@@ -50,9 +50,9 @@ class AssetOwnershipPanel(QGroupBox):
         button_box2.addButton("Transfer", QDialogButtonBox.ActionRole)
         button_box2.addButton("Issue More", QDialogButtonBox.ActionRole)
         self.button_box = [button_box, button_box2]
-        layout.addWidget(self.asset_select)
-        layout.addWidget(self.button_box[0])
-        layout.addWidget(self.button_box[1])
+        layout.addRow(self.asset_select)
+        layout.addRow(self.button_box[0])
+        layout.addRow(self.button_box[1])
         self.update_data()
 
     def issue_asset(self):

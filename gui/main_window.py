@@ -1,4 +1,4 @@
-from PyQt5.Qt import QMainWindow, QWidget, QGridLayout, QTabWidget, QGroupBox, QLabel, QApplication, QHBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QTabWidget, QGroupBox, QLabel, QApplication, QHBoxLayout
 from gui.portfolio_view import MyPortfolio
 from gui.asset_exchange_view import AssetExchange
 from gui.transaction_history_view import TransactionHistory

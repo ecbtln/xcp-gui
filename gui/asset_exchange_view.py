@@ -125,7 +125,8 @@ class OrderMatchesTableView(QTableWidget):
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.data = None
-        self.cellDoubleClicked.connect(self.doubleClickedCell)
+        #self.cellDoubleClicked.connect(self.doubleClickedCell)
+        #TODO: figure out the correct api call to get this working
 
     def doubleClickedCell(self, row, col):
         el = self.data[row]
