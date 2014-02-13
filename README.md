@@ -3,7 +3,15 @@ xcp-gui
 # Description
 A platform-independent, Qt-based python GUI for the XCP currency and exchange.
 The intention of this app is to provided a standalone bundle that automatically takes care of running counterpartyd
-in the background, much like Bitcoin's own Bitcoin-qt app.
+in the background, much like Bitcoin's own Bitcoin-qt app. On startup, the app takes care of making sure that the
+following prerequisites are satisifed, and if not alerts the user of this problem before quitting gracefully. In order,
+these are:
+
+1. Make sure bitcoind is up and running
+2. Verify bitcoind has an up to date blockchain, and if not it will wait until it does
+3. Starts ```counterpartyd```
+4. Makes sure the counterparty db is up to date
+5. Starts the app
 
 # Dependencies
 To run, the project has the following dependencies:

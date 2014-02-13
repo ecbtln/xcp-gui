@@ -188,8 +188,9 @@ class PlaceOrderDialog(QDialog):
         self.wallet = QApplication.instance().wallet
         active_portfolio = self.wallet.active_portfolio
         assets = active_portfolio.assets if active_portfolio is not None else []
-        asset_names = [a.name for a in assets if a.name != self.get_asset] # don't allow trading for the asset you're getting
+        asset_names = [a.name for a in assets] # don't allow trading for the asset you're getting
         asset_names.append(BTC)
+        asset_names = [a for a in asset_names if a != self.get_asset]
         self.give_combo_box.addItems(asset_names)
         self.give_value_box = QAssetValueSpinBox()
         self.give_value_box.setToolTip("The amount of the asset to give")
