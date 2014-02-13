@@ -47,7 +47,6 @@ class Portfolio:
         self._assets = assets  # just the asset names go here
         for a in assets:
             assert self.get_asset(a) is not None
-        # TODO: convert dictionary to object
         # TODO:, perhaps sort alphabetically?
         # Since, the constructor is taking values from the API, we first convert integer values to human-readable ones
         # amounts is a map from asset name to human-readable amount

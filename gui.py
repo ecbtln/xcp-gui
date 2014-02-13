@@ -16,6 +16,7 @@ import os
 import exceptions
 import time
 
+
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
                  bitcoind_rpc_user=None, bitcoind_rpc_password=None, rpc_host=None, rpc_port=None,
                  rpc_user=None, rpc_password=None, log_file=None, database_file=None, testnet=False, testcoin=False, unittest=False, headless=False, start_server=False):

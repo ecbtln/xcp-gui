@@ -1,11 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QTableWidget, QAbstractItemView, QGroupBox, QVBoxLayout,\
     QDialogButtonBox, QPushButton, QHeaderView, QTableWidgetItem, QApplication, QDialog, QFormLayout, QComboBox, \
-    QLineEdit, QAction
+    QLineEdit
 from constants import BTC, MAX_SPINBOX_INT
 from models import Asset
 from widgets import QAssetValueSpinBox, AssetLineEdit, ShowTransactionDetails
 from .asset_info_view import AssetInfoView
-
 
 class AssetExchange(QWidget):
     def __init__(self, *args, **kwargs):
@@ -128,7 +127,23 @@ class OrderMatchesTableView(QTableWidget):
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.data = None
+        self.cellDoubleClicked.connect(self.doubleClickedCell)
 
+    def doubleClickedCell(self, row, col):
+        el = self.data[row]
+        ADDRESSES = []
+        if el['forward_asset'] == BTC and el['tx0_address'] in ADDRESSES:
+            # we request an exchange from BTC to another asset, once matched, we must do a BTCPay
+            amt = el['forward_amount']
+        elif el['backward_asset'] == BTC and el['tx1_address'] in ADDRESSES:
+            # we request an exchange from BTC to another asset, but we got matched second
+            amt = el['backward_amount']
+        else:
+            amt = None
+
+        if amt is not None:
+            order_match_id = el['tx0_hash'] + el['tx1_hash']
+            BTCPayDialog(order_match_id, amt).exec_()
 
 
 class OpenOrdersTableView(QTableWidget):
@@ -150,11 +165,6 @@ class OpenOrdersTableView(QTableWidget):
         hash = el['tx_hash']
         CancelOrderDialog(hash).exec_()
 
-
-
-
-
-
 # class CancelledOrdersTableView(QTableWidget):
 #     def __init__(self, *args):
 #         super(CancelledOrdersTableView, self).__init__(*args)
@@ -167,7 +177,6 @@ class OpenOrdersTableView(QTableWidget):
 #         super(CompletedOrdersTableView, self).__init__(*args)
 #         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 #         self.verticalHeader().setVisible(False)
-
 
 class PlaceOrderDialog(QDialog):
     def __init__(self, *args, **kwargs):
@@ -302,17 +311,23 @@ class CancelOrderDialog(QDialog):
 
 
 class BTCPayDialog(QDialog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, order_match_id=None, amt=None, *args, **kwargs):
         super(BTCPayDialog, self).__init__(*args, **kwargs)
-        self.setWindowTitle("BTCpay")
+        if amt is None:
+            self.setWindowTitle("BTCpay")
+        else:
+            a = Asset(BTC, True, False, None)
+            self.setWindowTitle("Send %s %s" % (a.convert_for_app(amt), BTC))
 
         form_layout = QFormLayout()
 
-        self.offer_hash = QLineEdit()
-        self.offer_hash.textChanged.connect(self.textChanged)
-        self.offer_hash.setToolTip("The concatenation of the hashes of the two transactions which compose the order match.")
+        self.order_match_id = QLineEdit()
+        if order_match_id:
+            self.order_match_id.setText(order_match_id)
+        self.order_match_id.textChanged.connect(self.textChanged)
+        self.order_match_id.setToolTip("The concatenation of the hashes of the two transactions which compose the order match.")
         self.setToolTip("Create and broadcast a BTCpay message, to settle an Order Match for which you owe BTC.")
-        form_layout.addRow("Order Match ID: ", self.offer_hash)
+        form_layout.addRow("Order Match ID: ", self.order_match_id)
 
         button_box = QDialogButtonBox()
         button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
@@ -325,14 +340,14 @@ class BTCPayDialog(QDialog):
         self.textChanged()
 
     def textChanged(self):
-        self.submit_button.setEnabled(len(self.offer_hash.text()) > 0)
+        self.submit_button.setEnabled(len(self.order_match_id.text()) > 0)
 
     def submit(self):
         def success_callback(response):
             print(response)
             ShowTransactionDetails(response).exec_()
             self.close()
-        QApplication.instance().xcp_client.do_btcpay(self.offer_hash.text(), success_callback)
+        QApplication.instance().xcp_client.do_btcpay(self.order_match_id.text(), success_callback)
         print("Form submitted!")
 
 

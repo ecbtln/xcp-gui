@@ -36,16 +36,13 @@ class MyPortfolio(QWidget):
 class AssetOwnershipPanel(QGroupBox):
     def __init__(self):
         super(AssetOwnershipPanel, self).__init__("Asset Admin Panel")
-        form_layout = QFormLayout()
+        layout = QVBoxLayout()
         issue_asset_button = QPushButton('Issue New Asset')
         issue_asset_button.clicked.connect(self.issue_asset)
-        form_layout.addRow(issue_asset_button)
+        layout.addWidget(issue_asset_button)
         self.owned_assets = []
-        self.no_assets = QLabel('The current address does not own the rights to any assets. You may issue an asset above to get started.')
-        self.no_assets.setWordWrap(True)
-        form_layout.addRow(self.no_assets)
-        self.setLayout(form_layout)
-        self.combo_box = QComboBox()
+        self.setLayout(layout)
+        self.asset_select = QComboBox()
         button_box = QDialogButtonBox()
         button_box.addButton("Send Dividends", QDialogButtonBox.ActionRole)
         button_box.addButton("Callback", QDialogButtonBox.ActionRole)
@@ -53,6 +50,9 @@ class AssetOwnershipPanel(QGroupBox):
         button_box2.addButton("Transfer", QDialogButtonBox.ActionRole)
         button_box2.addButton("Issue More", QDialogButtonBox.ActionRole)
         self.button_box = [button_box, button_box2]
+        layout.addWidget(self.asset_select)
+        layout.addWidget(self.button_box[0])
+        layout.addWidget(self.button_box[1])
         self.update_data()
 
     def issue_asset(self):
@@ -63,28 +63,22 @@ class AssetOwnershipPanel(QGroupBox):
         if portfolio is None:
             assets = []
         else:
-            assets = portfolio._assets
-        if len(self.owned_assets) > 0 and len(assets) > 0:
-            # keep track of which was highlighted
-            old = self.combo_box.currentText()
-            self.combo_box.clear()
-            self.combo_box.addItems(assets)
-            if old in assets:
-                self.combo_box.setCurrentText(old)
-        else:
-            self.layout().removeWidget(self.combo_box)
-            self.layout().removeWidget(self.no_assets)
-            self.layout().removeWidget(self.button_box[0])
-            self.layout().removeWidget(self.button_box[1])
+            assets = [a for a in portfolio._assets if portfolio.owns_asset(a)]
 
-            if len(assets) > 0:
-                self.combo_box.clear()
-                self.combo_box.addItems(assets)
-                self.layout().addRow(self.combo_box)
-                self.layout().addRow(self.button_box[0])
-                self.layout().addRow(self.button_box[1])
-            else:
-                self.layout().addRow(self.no_assets)
+        if len(assets) > 0:
+            #TODO: for some reason the combo box isn't really changing state
+            # keep track of which was highlighted
+            old = self.asset_select.currentText()
+
+            self.asset_select.clear()
+            self.asset_select.addItem(assets)
+            if old in assets:
+                self.asset_select.setCurrentText(old)
+            self.asset_select.setToolTip('')
+        else:
+            self.asset_select.setToolTip('The current address does not own the rights to any assets. You may issue an asset above to get started.')
+
+
 
         self.owned_assets = assets
             # reinitialize the form layout
