@@ -292,16 +292,18 @@ def main(argv):
             t.start()
             time.sleep(10)
  #           splashScreen.bar.setValue(75)
-            # we've now started up the webserver, finally just wait until the db is in a good state
-            while True:
-                splashScreen.showMessage("Catching up the counterpartyd blockchain")
-                client = XCPClient()
-                try:
-                    if client.get_running_info()['db_caught_up']:
-                        break
-                    time.sleep(5)
-                except Exception as e:
-                    failure_message.append((str(e), traceback.format_exc()))
+        # we've now started up the webserver, finally just wait until the db is in a good state
+        while True:
+            splashScreen.showMessage("Catching up the counterpartyd blockchain")
+            client = XCPClient()
+            try:
+                response = client.get_running_info()
+                if response['db_caught_up']:
+                    #block = response['last_block']['block_index']
+                    break
+                time.sleep(5)
+            except Exception as e:
+                failure_message.append((str(e), traceback.format_exc()))
 
 
 
@@ -312,11 +314,9 @@ def main(argv):
         from utils import display_alert
         splashScreen.close()
         info, exc = failure_message[0]
-        from rpcclient.common import report_exception
         display_alert(info, exc)
     else:
         mw = MainWindow()
-
         def callback(results):
             mw.fetch_initial_data_lambda()(results)
             mw.initialize_data_in_tabs()
@@ -333,10 +333,10 @@ def main(argv):
                 client = XCPClient()
                 try:
                     block = client.get_running_info()['last_block']['block_index']
-
                     # any time we find a new block in the block chain, trigger a UI refresh
                     if app.LAST_BLOCK is None or block > app.LAST_BLOCK:
                         app.LAST_BLOCK = block
+                        mw.setActiveBlockNumber(block)
                         app.fetch_initial_data(callback)
                 except Exception as e:
                     print(e)

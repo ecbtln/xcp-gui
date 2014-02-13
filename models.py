@@ -98,6 +98,7 @@ class Wallet:
     def get_asset(self, asset_name):
         return self.assets.get(asset_name, None)
 
+
     def update_addresses(self, new):
         old_selected = None if self.active_address_index is None else self.addresses[self.active_address_index]
         self.addresses = new

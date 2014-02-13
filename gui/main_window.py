@@ -1,4 +1,4 @@
-from PyQt5.Qt import QMainWindow, QWidget, QGridLayout, QTabWidget, QGroupBox, QPushButton, QApplication
+from PyQt5.Qt import QMainWindow, QWidget, QGridLayout, QTabWidget, QGroupBox, QLabel, QApplication, QHBoxLayout
 from gui.portfolio_view import MyPortfolio
 from gui.asset_exchange_view import AssetExchange
 from gui.transaction_history_view import TransactionHistory
@@ -28,6 +28,10 @@ class MainWindow(QMainWindow):
         tabWidget.addTab(TransactionHistory(), "Transaction History")
 
         overview = QGroupBox('Overview')
+        self.block_chain_label = QLabel()
+        layout = QHBoxLayout()
+        layout.addWidget(self.block_chain_label)
+        overview.setLayout(layout)
 
         overview.setFixedWidth(250)
         wallet_view = MyWalletGroupBox(self)
@@ -49,3 +53,6 @@ class MainWindow(QMainWindow):
         Called after the initial request is done populating addresses into the wallet
         """
         self.asset_exchange.fetch_data()
+
+    def setActiveBlockNumber(self, block_num):
+        self.block_chain_label.setText('Block #: %d' % block_num)

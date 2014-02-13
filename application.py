@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import QApplication
-from models import Wallet
+from models import Wallet, Asset
 from rpcclient.btc_async_app_client import BTCAsyncAppClient
 from rpcclient.xcp_async_app_client import XCPAsyncAppClient
-from constants import XCP, BTC
+from constants import XCP
 
 
 class XCPApplication(QApplication):
@@ -68,6 +68,19 @@ class XCPApplication(QApplication):
                                                'values': values})
                     wallet.update_portfolios(asset_info_list, new_portfolios)
                     update_wallet_callback_func(wallet.addresses)
+
+                    # we need to get a list of all the assets and their results (to see what is divisible and what isn't)
+                    # and also to suggest to the user when they type an asset to make an order for
+                    def process_issuances(issuances):
+                        for i in issuances:
+                            name = i['asset']
+                            if name not in wallet.assets:
+                                issuer = i['issuer']
+                                divisible = i['divisible']
+                                callable = i['callable']
+                                wallet.assets[name] = Asset(name, divisible, callable, issuer)
+                    self.xcp_client.get_issuances(process_issuances)
+
                 self.xcp_client.get_assets_info(asset_name_list, process_asset_info)
 
             self.xcp_client.get_balances(wallet.addresses, process_balances)

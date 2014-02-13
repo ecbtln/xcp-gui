@@ -71,7 +71,7 @@ class AssetOwnershipPanel(QGroupBox):
             old = self.asset_select.currentText()
 
             self.asset_select.clear()
-            self.asset_select.addItem(assets)
+            self.asset_select.addItems(assets)
             if old in assets:
                 self.asset_select.setCurrentText(old)
             self.asset_select.setToolTip('')
@@ -191,10 +191,9 @@ class AssetIssueDialog(QDialog):
         def success_callback(response):
             print(response)
             ShowTransactionDetails(response).exec_()
-            self.close()
 
         QApplication.instance().xcp_client.do_issuance(source, quantity, asset, divisible, description, callable, datetime, call_price, success_callback)
-
+        self.close()
 
     def processChangedText(self):
         string = self.asset_description.toPlainText()

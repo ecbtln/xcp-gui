@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QVBoxLayout, QTabWidget, QWidget, QHBoxLayout, QPushButton, QDialog
 from widgets import AssetLineEdit
 
+
 class AssetInfoView(QDialog):
     def __init__(self, asset_name, *args, **kwargs):
         super(AssetInfoView, self).__init__(*args, **kwargs)

@@ -3,6 +3,7 @@ from constants import Satoshi, MAX_SPINBOX_INT
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp
 
+
 class QAssetValueSpinBox(QDoubleSpinBox):
     """
     Automatically toggles between satoshi-decimal and whole-number precision with a simple method call
@@ -39,6 +40,7 @@ class ShowTransactionDetails(QDialog):
         self.setMinimumHeight(180)
         self.setLayout(layout)
         button_box.clicked.connect(self.close)
+        text_edit.setReadOnly(True)
 
 
 class AssetLineEdit(QLineEdit):

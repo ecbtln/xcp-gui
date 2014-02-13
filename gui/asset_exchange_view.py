@@ -1,8 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QTableWidget, QAbstractItemView, QGroupBox, QVBoxLayout,\
     QDialogButtonBox, QPushButton, QHeaderView, QTableWidgetItem, QApplication, QDialog, QFormLayout, QComboBox, \
-    QLineEdit
+    QLineEdit, QLabel
 from constants import BTC, MAX_SPINBOX_INT
-from models import Asset
 from widgets import QAssetValueSpinBox, AssetLineEdit, ShowTransactionDetails
 from .asset_info_view import AssetInfoView
 
@@ -36,7 +35,7 @@ class AssetExchange(QWidget):
         vbox_layout.addWidget(self.open_orders)
         group_box.setLayout(vbox_layout)
         glob_vbox_layout.addWidget(group_box)
-        group_box = QGroupBox('Order Matches (Pending BTCPay)')
+        group_box = QGroupBox('Order Matches (Double click to BTCPay)')
         vbox_layout = QVBoxLayout()
         self.order_matches = OrderMatchesTableView()
         vbox_layout.addWidget(self.order_matches)
@@ -49,8 +48,7 @@ class AssetExchange(QWidget):
         self.fetch_matched_orders()
 
     def place_order(self):
-        place_order_ui = PlaceOrderDialog()
-        place_order_ui.exec_()
+        PickGetAssetOrderDialog().exec_()
 
     def cancel_order(self):
         cancel_order_ui = CancelOrderDialog()
@@ -91,7 +89,7 @@ class AssetExchange(QWidget):
         def callback(orders):
             self.open_orders.data = orders
             self.open_orders.setRowCount(len(orders))
-
+            btc = QApplication.instance().wallet.get_asset(BTC)
             for i, o in enumerate(orders):
                 self.open_orders.setItem(i, 0, QTableWidgetItem('%d' % o['tx_index']))
                 get_asset = o['get_asset']
@@ -104,9 +102,9 @@ class AssetExchange(QWidget):
                 self.open_orders.setItem(i, 2, QTableWidgetItem('%s %s' % (give_amount, give_asset)))
                 self.open_orders.setItem(i, 3, QTableWidgetItem('%.2f %s/%s' % (float(give_amount)/float(get_amount), give_asset, get_asset)))
                 self.open_orders.setItem(i, 4, QTableWidgetItem('%d' % (o['block_index'] + o['expiration'])))
-                a = Asset(BTC, True, False, '')
-                self.open_orders.setItem(i, 5, QTableWidgetItem(str(a.convert_for_app(o['fee_required']))))
-                self.open_orders.setItem(i, 6, QTableWidgetItem(str(a.convert_for_app(o['fee_provided']))))
+
+                self.open_orders.setItem(i, 5, QTableWidgetItem(str(btc.convert_for_app(o['fee_required']))))
+                self.open_orders.setItem(i, 6, QTableWidgetItem(str(btc.convert_for_app(o['fee_provided']))))
                 self.open_orders.setItem(i, 7, QTableWidgetItem('%s %s' %
                                                     (give_asset_obj.convert_for_app(o['give_remaining']), give_asset)))
 
@@ -131,11 +129,11 @@ class OrderMatchesTableView(QTableWidget):
 
     def doubleClickedCell(self, row, col):
         el = self.data[row]
-        ADDRESSES = []
-        if el['forward_asset'] == BTC and el['tx0_address'] in ADDRESSES:
+        app = QApplication.instance()
+        if el['forward_asset'] == BTC and el['tx0_address'] in app.wallet.addresses:
             # we request an exchange from BTC to another asset, once matched, we must do a BTCPay
             amt = el['forward_amount']
-        elif el['backward_asset'] == BTC and el['tx1_address'] in ADDRESSES:
+        elif el['backward_asset'] == BTC and el['tx1_address'] in app.wallet.addresses:
             # we request an exchange from BTC to another asset, but we got matched second
             amt = el['backward_amount']
         else:
@@ -179,17 +177,18 @@ class OpenOrdersTableView(QTableWidget):
 #         self.verticalHeader().setVisible(False)
 
 class PlaceOrderDialog(QDialog):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, asset, *args, **kwargs):
         super(PlaceOrderDialog, self).__init__(*args, **kwargs)
         self.setWindowTitle("Place Order for Asset")
         self.setToolTip("Issue an order request.")
         form_layout = QFormLayout()
+        self.get_asset = asset
         self.give_combo_box = QComboBox()
         self.give_combo_box.setToolTip("The asset to give")
         self.wallet = QApplication.instance().wallet
         active_portfolio = self.wallet.active_portfolio
         assets = active_portfolio.assets if active_portfolio is not None else []
-        asset_names = [a.name for a in assets]
+        asset_names = [a.name for a in assets if a.name != self.get_asset] # don't allow trading for the asset you're getting
         asset_names.append(BTC)
         self.give_combo_box.addItems(asset_names)
         self.give_value_box = QAssetValueSpinBox()
@@ -198,13 +197,12 @@ class PlaceOrderDialog(QDialog):
         form_layout.addRow("Give Quantity: ", self.give_value_box)
         self.give_combo_box.currentIndexChanged.connect(self.give_combo_box_value_changed)
         self.give_combo_box_value_changed()
-        self.get_asset = AssetLineEdit()
-        self.get_asset.setToolTip("The asset request in return")
+
         self.get_combo_box = QAssetValueSpinBox()
         self.get_combo_box.setToolTip("The quantity of the asset request in return")
-        self.get_combo_box.set_asset_divisible(False)
+        self.get_combo_box.set_asset_divisible(self.wallet.get_asset(self.get_asset).divisible)
         self.get_combo_box.setRange(0, MAX_SPINBOX_INT)
-        form_layout.addRow("Get Asset: ", self.get_asset)
+        form_layout.addRow("Get Asset: ", QLabel(self.get_asset))
         form_layout.addRow("Get Quantity: ", self.get_combo_box)
 
 
@@ -212,6 +210,7 @@ class PlaceOrderDialog(QDialog):
         self.expiration.setToolTip("The number of blocks for which the order should be valid.")
         self.expiration.set_asset_divisible(False)
         self.expiration.setRange(1, MAX_SPINBOX_INT)
+        self.expiration.setValue(50)
         form_layout.addRow("Expiration: ", self.expiration)
 
 
@@ -242,23 +241,23 @@ class PlaceOrderDialog(QDialog):
 
     def submit(self):
         give_asset = self.give_combo_box.currentText()
-        give_quantity =  QApplication.instance().wallet.get_asset(give_asset).convert_for_api(self.give_value_box.value())
-        get_quantity = int(self.get_combo_box.value())
-        get_asset = self.get_asset.text()
+        wallet = QApplication.instance().wallet
+        give_quantity =  wallet.get_asset(give_asset).convert_for_api(self.give_value_box.value())
+        get_asset = self.get_asset
+        get_quantity = wallet.get_asset(get_asset).convert_for_api(self.get_combo_box.value())
         expiration = int(self.expiration.value())
-        a = Asset(BTC, True, False, None)
-        fee_required = a.convert_for_api(self.fee_required.value())
-        fee_provided = a.convert_for_api(self.fee_provided.value())
+        btc = wallet.get_asset(BTC)
+        fee_required = btc.convert_for_api(self.fee_required.value())
+        fee_provided = btc.convert_for_api(self.fee_provided.value())
 
         source = QApplication.instance().wallet.active_address
 
         def success_callback(response):
             print(response)
             ShowTransactionDetails(response).exec_()
-            self.close()
-
         QApplication.instance().xcp_client.do_order(source, give_quantity, give_asset, get_quantity, get_asset,
                                                     expiration, fee_required, fee_provided, success_callback)
+        self.close()
 
     def give_combo_box_value_changed(self):
         a = self.give_combo_box.currentText()
@@ -271,6 +270,35 @@ class PlaceOrderDialog(QDialog):
         self.give_value_box.set_asset_divisible(divisible)
         self.give_value_box.setRange(0, max)
 
+
+class PickGetAssetOrderDialog(QDialog):
+    def __init__(self, *args, **kwargs):
+        super(PickGetAssetOrderDialog, self).__init__(*args, **kwargs)
+        self.setWindowTitle("Pick Asset to Order")
+        form_layout = QFormLayout()
+        self.get_asset = AssetLineEdit()
+        form_layout.addRow("Get Asset: ", self.get_asset)
+        button_box = QDialogButtonBox()
+        button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+
+        self.submit_button = QPushButton("Select")
+        button_box.addButton(self.submit_button, QDialogButtonBox.AcceptRole)
+        form_layout.addRow(button_box)
+        button_box.rejected.connect(self.close)
+        button_box.accepted.connect(self.submit)
+        self.setLayout(form_layout)
+        self.get_asset.textChanged.connect(self.textChanged)
+        self.wallet = QApplication.instance().wallet
+        self.textChanged()
+
+    def textChanged(self):
+        self.submit_button.setEnabled(self.wallet.get_asset(self.get_asset.text()) is not None)
+
+    def submit(self):
+        asset = self.get_asset.text()
+        if self.wallet.get_asset(asset) is not None:
+            self.close()
+            PlaceOrderDialog(asset).exec_()
 
 class CancelOrderDialog(QDialog):
     def __init__(self, tx_hash=None, *args, **kwargs):
@@ -302,9 +330,8 @@ class CancelOrderDialog(QDialog):
         def success_callback(response):
             print(response)
             ShowTransactionDetails(response).exec_()
-            self.close()
+        self.close()
         QApplication.instance().xcp_client.do_cancel(self.offer_hash.text(), success_callback)
-        print("Form submitted!")
 
     def textChanged(self):
         self.submit_button.setEnabled(len(self.offer_hash.text()) > 0)
@@ -316,7 +343,7 @@ class BTCPayDialog(QDialog):
         if amt is None:
             self.setWindowTitle("BTCpay")
         else:
-            a = Asset(BTC, True, False, None)
+            a = QApplication.instance().wallet.get_asset(BTC)
             self.setWindowTitle("Send %s %s" % (a.convert_for_app(amt), BTC))
 
         form_layout = QFormLayout()
@@ -346,8 +373,8 @@ class BTCPayDialog(QDialog):
         def success_callback(response):
             print(response)
             ShowTransactionDetails(response).exec_()
-            self.close()
+
         QApplication.instance().xcp_client.do_btcpay(self.order_match_id.text(), success_callback)
-        print("Form submitted!")
+        self.close()
 
 

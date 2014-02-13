@@ -111,7 +111,9 @@ class XCPAsyncAppClient(XCPClient):
                                             'filterop': 'or',
                                             'show_expired': False,
                                             'order_by': 'block_index',
-                                            'order_dir': 'desc'}, callback)
+                                            'order_dir': 'desc',
+                                            'is_valid': True},
+                             callback)
 
     def get_order_matches(self, callback):
         self._async_api_call('get_order_matches', {'is_mine': True,
@@ -124,6 +126,10 @@ class XCPAsyncAppClient(XCPClient):
                                                    'order_dir': 'desc',
                                                    'filters':[{'field': 'forward_asset', 'op': '==', 'value': BTC},
                                                               {'field': 'backward_asset', 'op': '==', 'value': BTC}]}, callback)
+
+    def get_issuances(self, callback):
+        self._async_api_call('get_issuances', [], callback)
+
 if __name__ == '__main__':
     client = XCPAsyncAppClient(port=14000)
     client.get_assets_info(['IIII', 'WEED'], lambda x: print(x))
