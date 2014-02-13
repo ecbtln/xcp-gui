@@ -45,7 +45,6 @@ class XCPClient(object):
         data = json.dumps(payload)
         print("Request URL: %s. Data: %s. Headers: %s" % (self.url, data, self.headers))
         response = requests.post(self.url, data=data, headers=self.headers, auth=self.auth)
-        print(response)
         if response:
             js = response.json()
             if 'result' in js:
@@ -78,27 +77,27 @@ class XCPClient(object):
             return super(XCPClient, self).__getattribute__(item)
 
 
-
-if __name__ == '__main__':
-    client = XCPClient(port=14000)
-    BTC_ADDRESSES = ['mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th',
-                     'mzdtcqgLKR6HiartUL19wD3HRERX7RzELz',
-                     'mwR7RbuNwgwX9cfHKeS7Jgmydn1KtFKH1X',
-                     'mrutZKJ1XrNdAwLhsKfTUmZwdk1shhsRWw']
-    # get balances for all assets, including xcp, for a given address
-    #print(float(client.xcp_supply()) / 100000000)
-    #print(client.get_balances([{'field': 'address', 'op': '==', 'value': BTC_ADDRESSES[0]}]))
-    #print(client.get_balances({"filters": [{'field': 'address', 'op': '==', 'value': x} for x in BTC_ADDRESSES],
-    #                         "filterop": "or"}))
-    print(client._call_api('get_address', ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf"]))
-    import time
-    start = time.time()
-    client.get_issuances()
-    client.xcp_supply()
-    client.get_balances({"filters": [{'field': 'address', 'op': '==', 'value': x} for x in BTC_ADDRESSES],
-                         "filterop": "or"})
-    print(time.time() - start)
-    print(client._call_api('get_orders', {"order_dir": "desc", "filters": [{"field": "source", "op": "==", "value": "n48CbAAaxRCUH6n9kZbGMfxxtJNPBzmcxQ"}], "filterop": "or", "show_expired": False, "order_by": "block_index"}
-))
-    print(client.get_asset_info('WEED'))
-    print(client.get_running_info())
+#
+# if __name__ == '__main__':
+#     client = XCPClient(port=14000)
+#     BTC_ADDRESSES = ['mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th',
+#                      'mzdtcqgLKR6HiartUL19wD3HRERX7RzELz',
+#                      'mwR7RbuNwgwX9cfHKeS7Jgmydn1KtFKH1X',
+#                      'mrutZKJ1XrNdAwLhsKfTUmZwdk1shhsRWw']
+#     # get balances for all assets, including xcp, for a given address
+#     #print(float(client.xcp_supply()) / 100000000)
+#     #print(client.get_balances([{'field': 'address', 'op': '==', 'value': BTC_ADDRESSES[0]}]))
+#     #print(client.get_balances({"filters": [{'field': 'address', 'op': '==', 'value': x} for x in BTC_ADDRESSES],
+#     #                         "filterop": "or"}))
+#     print(client._call_api('get_address', ["1CUdFmgK9trTNZHALfqGvd8d6nUZqH2AAf"]))
+#     import time
+#     start = time.time()
+#     client.get_issuances()
+#     client.xcp_supply()
+#     client.get_balances({"filters": [{'field': 'address', 'op': '==', 'value': x} for x in BTC_ADDRESSES],
+#                          "filterop": "or"})
+#     print(time.time() - start)
+#     print(client._call_api('get_orders', {"order_dir": "desc", "filters": [{"field": "source", "op": "==", "value": "n48CbAAaxRCUH6n9kZbGMfxxtJNPBzmcxQ"}], "filterop": "or", "show_expired": False, "order_by": "block_index"}
+# ))
+#     print(client.get_asset_info('WEED'))
+#     print(client.get_running_info())

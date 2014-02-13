@@ -116,24 +116,11 @@ class XCPAsyncAppClient(XCPClient):
                              callback)
 
     def get_order_matches(self, callback):
-        self._async_api_call('get_order_matches', {'is_mine': True,
-                                                   'order_by': 'block_index',
-                                                   'order_dir': 'desc'}, callback)
+        self._async_api_call('get_order_matches', {'is_mine': True}, callback)
 
-    def get_btcpay_order_matches(self, callback):
-        self._async_api_call('get_order_matches', {'is_mine': True,
-                                                   'order_by': 'block_index',
-                                                   'order_dir': 'desc',
-                                                   'filters':[{'field': 'forward_asset', 'op': '==', 'value': BTC},
-                                                              {'field': 'backward_asset', 'op': '==', 'value': BTC}]}, callback)
+    # def get_btcpay_order_matches(self, callback):
+    #     self._async_api_call('get_order_matches', {'order_by': 'tx0_index',
+    #                                                'order_dir': 'desc'}, callback)
 
     def get_issuances(self, callback):
         self._async_api_call('get_issuances', [], callback)
-
-if __name__ == '__main__':
-    client = XCPAsyncAppClient(port=14000)
-    client.get_assets_info(['IIII', 'WEED'], lambda x: print(x))
-    BTC_ADDRESSES = ['mz8qzVaH8RaVp2Rq6m8D2dTiSFirhFf4th',
-                    'mzdtcqgLKR6HiartUL19wD3HRERX7RzELz',
-                    'mwR7RbuNwgwX9cfHKeS7Jgmydn1KtFKH1X',
-                    'mrutZKJ1XrNdAwLhsKfTUmZwdk1shhsRWw']

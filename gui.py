@@ -294,7 +294,7 @@ def main(argv):
  #           splashScreen.bar.setValue(75)
 
         # we've now started up the webserver, finally just wait until the db is in a good state
-        while True:g
+        while True:
             splashScreen.showMessage("Catching up the counterpartyd blockchain")
             client = XCPClient()
             try:
