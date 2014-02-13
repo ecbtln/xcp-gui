@@ -17,17 +17,25 @@ class Asset:
         self.callable = bool(callable) if callable is not None else None
         self.owner = owner
 
-    def format_for_api(self, amount):
+    def convert_for_api(self, amount):
         if self.divisible:
             return int(D(amount) * Satoshi.CONSTANT)
         else:
             return int(amount)
 
-    def format_for_app(self, amount):
+    def convert_for_app(self, amount):
         if self.divisible:
             return D(amount) / Satoshi.CONSTANT
         else:
             return D(amount)
+
+    def format_quantity(self, amount):
+        """ once we have an amount, as a decimal, we want to be able to convert it to a string, and append decimal places
+        that pad it to Satoshi.NUM_DECIMAL places, even if the decimal is not that long"""
+        if self.divisible:
+            return str(amount.quantize(Satoshi.INVERSE))
+        else:
+            return str(amount)
 
 
 class Portfolio:
@@ -43,7 +51,7 @@ class Portfolio:
         # TODO:, perhaps sort alphabetically?
         # Since, the constructor is taking values from the API, we first convert integer values to human-readable ones
         # amounts is a map from asset name to human-readable amount
-        self.amounts = {a: self.wallet.get_asset(a).format_for_app(v) for a, v in zip(assets, values)}
+        self.amounts = {a: self.wallet.get_asset(a).convert_for_app(v) for a, v in zip(assets, values)}
         self.address = address
 
     def get_asset(self, asset_name):

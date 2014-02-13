@@ -63,7 +63,9 @@ class XCPAsyncAppClient(XCPClient):
             # the caller is expecting an array, so wrap the callback parameter in an array
             self.get_asset_info(assets[0], lambda res: callback([res]))
         else:
-            self._call_multiple([lambda resp: self.get_asset_info(a, resp) for a in assets], callback)
+            # need to wrap this lambda lambda crap so that python doesn't just distribute the same (last) element
+            # of the assets list to all the lambdas when they are called
+            self._call_multiple([(lambda asset: lambda resp: self.get_asset_info(asset, resp))(a) for a in assets], callback)
 
     def do_send(self, source, destination, quantity, asset, callback):
         self._async_api_call('do_send', [source, destination, quantity, asset], callback)

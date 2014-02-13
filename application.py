@@ -56,6 +56,7 @@ class XCPApplication(QApplication):
                                         'callable': res['callable'],
                                         'owner': res['owner']} for asset_name, res in zip(asset_name_list,
                                                                                           asset_info_results)]
+
                     # now massage the portfolios dictionary to be the desired format of the wallet method
                     new_portfolios = []
                     for address in portfolios:

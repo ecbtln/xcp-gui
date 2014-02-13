@@ -217,8 +217,8 @@ def main(argv):
     parser.add_argument('--database-file', help='the location of the SQLite3 database')
     parser.add_argument('--config-file', help='the location of the configuration file')
     parser.add_argument('--log-file', help='the location of the log file')
-    parser.add_argument('--headless', action='store_true', default=False, help='assume headless operation, e.g. don’t ask for wallet passhrase')
-    parser.add_argument('--no-counterpartyd', action='store_true', default=False, help='assume headless operation, e.g. don’t ask for wallet passhrase')
+    parser.add_argument('--headless', action='store_true', default=False, help='assume headless operation, don\'t ask for wallet passphrase')
+    parser.add_argument('--no-counterpartyd', action='store_true', default=False, help='assume headless operation, e.g. don\'t ask for wallet passhrase')
 
 
     args = parser.parse_args()

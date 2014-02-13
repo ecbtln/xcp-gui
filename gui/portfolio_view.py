@@ -8,6 +8,31 @@ from widgets import QAssetValueSpinBox, ShowTransactionDetails, AssetLineEdit
 from constants import MAX_BYTES_ASSET_DESCRIPTION, MAX_SPINBOX_INT, MIN_LENGTH_ASSET_NAME
 from models import Asset
 
+
+class MyPortfolio(QWidget):
+    def __init__(self):
+        super(MyPortfolio, self).__init__()
+        grid_layout = QGridLayout()
+        send_asset_box = QGroupBox("Send Asset")
+        send_asset_box.setFixedHeight(200)
+        vertical_layout = QVBoxLayout()
+        self.send_asset_widget = SendAssetWidget()
+        vertical_layout.addWidget(self.send_asset_widget)
+        send_asset_box.setLayout(vertical_layout)
+        grid_layout.addWidget(send_asset_box, 0, 0)
+        self.ownership_panel = AssetOwnershipPanel()
+        grid_layout.addWidget(AssetOwnershipPanel(), 1, 0)
+        self.asset_table = MyAssetTable()
+        grid_layout.addWidget(self.asset_table, 0, 1, 2, 1)
+        grid_layout.setColumnStretch(1, 6)
+        self.setLayout(grid_layout)
+
+    def update_data(self, portfolio):
+        self.asset_table.update_data(portfolio)
+        self.send_asset_widget.update_data(portfolio)
+        self.ownership_panel.update_data(portfolio)
+
+
 class AssetOwnershipPanel(QGroupBox):
     def __init__(self):
         super(AssetOwnershipPanel, self).__init__("Asset Admin Panel")
@@ -65,30 +90,6 @@ class AssetOwnershipPanel(QGroupBox):
             # reinitialize the form layout
 
 
-class MyPortfolio(QWidget):
-    def __init__(self):
-        super(MyPortfolio, self).__init__()
-        grid_layout = QGridLayout()
-        send_asset_box = QGroupBox("Send Asset")
-        send_asset_box.setFixedHeight(200)
-        vertical_layout = QVBoxLayout()
-        self.send_asset_widget = SendAssetWidget()
-        vertical_layout.addWidget(self.send_asset_widget)
-        send_asset_box.setLayout(vertical_layout)
-        grid_layout.addWidget(send_asset_box, 0, 0)
-        self.ownership_panel = AssetOwnershipPanel()
-        grid_layout.addWidget(AssetOwnershipPanel(), 1, 0)
-        self.asset_table = MyAssetTable()
-        grid_layout.addWidget(self.asset_table, 0, 1, 2, 1)
-        grid_layout.setColumnStretch(1, 6)
-        self.setLayout(grid_layout)
-
-    def update_data(self, portfolio):
-        self.asset_table.update_data(portfolio)
-        self.send_asset_widget.update_data(portfolio)
-        self.ownership_panel.update_data(portfolio)
-
-
 class MyAssetTable(QTableWidget):
     def __init__(self, *args):
         super(MyAssetTable, self).__init__(*args)
@@ -105,7 +106,7 @@ class MyAssetTable(QTableWidget):
         self.setRowCount(len(assets))
         for i, a in enumerate(assets):
             self.setItem(i, 0, QTableWidgetItem(a.name))
-            self.setItem(i, 1, QTableWidgetItem(str(portfolio.amount_for_asset(a.name))))
+            self.setItem(i, 1, QTableWidgetItem(a.format_quantity(portfolio.amount_for_asset(a.name))))
 
 
 class AssetIssueDialog(QDialog):
@@ -183,7 +184,7 @@ class AssetIssueDialog(QDialog):
         asset = self.line_edit.text()
         description = self.asset_description.toPlainText()
         a = Asset(asset, divisible, callable, source)
-        quantity = a.format_for_api(self.spinbox.value())
+        quantity = a.convert_for_api(self.spinbox.value())
         if callable:
             call_price = int(self.call_price.value())
             call_date = self.call_date.selectedDate()
@@ -305,7 +306,7 @@ class SendAssetWidget(QWidget):
         asset = self.combo_box.currentText()
         recipient = self.line_edit.text()
         sender = QApplication.instance().wallet.active_address
-        amount = QApplication.instance().wallet.get_asset(asset).format_for_api(amount)
+        amount = QApplication.instance().wallet.get_asset(asset).convert_for_api(amount)
 
         def success_callback(response):
             print(response)

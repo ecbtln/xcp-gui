@@ -74,10 +74,10 @@ class AssetExchange(QWidget):
                 self.order_matches.setItem(i, 0, QTableWidgetItem('%d' % o['tx0_index']))
                 forward_asset = o['forward_asset']
                 forward_asset_obj = app.wallet.get_asset(forward_asset)
-                forward_amount = str(forward_asset_obj.format_for_app(o['forward_amount']))
+                forward_amount = str(forward_asset_obj.convert_for_app(o['forward_amount']))
                 backward_asset = o['backward_asset']
                 backward_asset_obj = app.wallet.get_asset(backward_asset)
-                backward_amount = str(backward_asset_obj.format_for_app(o['backward_amount']))
+                backward_amount = str(backward_asset_obj.convert_for_app(o['backward_amount']))
                 self.order_matches.setItem(i, 1, QTableWidgetItem(o['tx0_address']))
                 self.order_matches.setItem(i, 2, QTableWidgetItem('%s %s' % (forward_amount, forward_asset)))
                 self.order_matches.setItem(i, 3, QTableWidgetItem('%d' % o['tx1_index']))
@@ -97,19 +97,19 @@ class AssetExchange(QWidget):
                 self.open_orders.setItem(i, 0, QTableWidgetItem('%d' % o['tx_index']))
                 get_asset = o['get_asset']
                 get_asset_obj = app.wallet.get_asset(get_asset)
-                get_amount = str(get_asset_obj.format_for_app(o['get_amount']))
+                get_amount = str(get_asset_obj.convert_for_app(o['get_amount']))
                 give_asset = o['give_asset']
                 give_asset_obj = app.wallet.get_asset(give_asset)
-                give_amount = str(give_asset_obj.format_for_app(o['give_amount']))
+                give_amount = str(give_asset_obj.convert_for_app(o['give_amount']))
                 self.open_orders.setItem(i, 1, QTableWidgetItem('%s %s' % (get_amount, get_asset)))
                 self.open_orders.setItem(i, 2, QTableWidgetItem('%s %s' % (give_amount, give_asset)))
                 self.open_orders.setItem(i, 3, QTableWidgetItem('%.2f %s/%s' % (float(give_amount)/float(get_amount), give_asset, get_asset)))
                 self.open_orders.setItem(i, 4, QTableWidgetItem('%d' % (o['block_index'] + o['expiration'])))
                 a = Asset(BTC, True, False, '')
-                self.open_orders.setItem(i, 5, QTableWidgetItem(str(a.format_for_app(o['fee_required']))))
-                self.open_orders.setItem(i, 6, QTableWidgetItem(str(a.format_for_app(o['fee_provided']))))
+                self.open_orders.setItem(i, 5, QTableWidgetItem(str(a.convert_for_app(o['fee_required']))))
+                self.open_orders.setItem(i, 6, QTableWidgetItem(str(a.convert_for_app(o['fee_provided']))))
                 self.open_orders.setItem(i, 7, QTableWidgetItem('%s %s' %
-                                                    (give_asset_obj.format_for_app(o['give_remaining']), give_asset)))
+                                                    (give_asset_obj.convert_for_app(o['give_remaining']), give_asset)))
 
 
         app.xcp_client.get_orders(addresses, callback)
@@ -233,13 +233,13 @@ class PlaceOrderDialog(QDialog):
 
     def submit(self):
         give_asset = self.give_combo_box.currentText()
-        give_quantity =  QApplication.instance().wallet.get_asset(give_asset).format_for_api(self.give_value_box.value())
+        give_quantity =  QApplication.instance().wallet.get_asset(give_asset).convert_for_api(self.give_value_box.value())
         get_quantity = int(self.get_combo_box.value())
         get_asset = self.get_asset.text()
         expiration = int(self.expiration.value())
         a = Asset(BTC, True, False, None)
-        fee_required = a.format_for_api(self.fee_required.value())
-        fee_provided = a.format_for_api(self.fee_provided.value())
+        fee_required = a.convert_for_api(self.fee_required.value())
+        fee_provided = a.convert_for_api(self.fee_provided.value())
 
         source = QApplication.instance().wallet.active_address
 
