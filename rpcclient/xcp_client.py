@@ -4,7 +4,7 @@ import json
 import requests
 from requests.auth import HTTPBasicAuth
 from exceptions import InvalidRPCMethod, InvalidRPCArguments, RPCError
-
+import counterpartyd.lib.config as config
 
 class XCPClient(object):
     VALID_API_METHODS = {'get_address', 'xcp_supply', 'get_balances', 'get_bets', 'get_bet_matches', 'get_broadcasts',
@@ -13,8 +13,17 @@ class XCPClient(object):
                          'do_broadcast', 'do_btcpay', 'do_burn', 'do_cancel', 'do_dividend', 'do_issuance', 'do_order',
                          'do_send', 'get_block_info', 'get_running_info'}
 
-    def __init__(self, host='localhost', port=4000, rpcuser='rpcuser', rpcpassword='rpcpassword'):
-        self.url = 'http://%s:%d/jsonrpc/' % (host, port)
+    def __init__(self, host=None, port=None, rpcuser=None, rpcpassword=None):
+        if host is None:
+            host = config.RPC_HOST
+        if port is None:
+            port = config.RPC_PORT
+        if rpcuser is None:
+            rpcuser = config.RPC_USER
+        if rpcpassword is None:
+            rpcpassword = config.RPC_PASSWORD
+
+        self.url = 'http://%s:%s/jsonrpc/' % (host, port)
         self.headers = {'content-type': 'application/json'}
         self.auth = HTTPBasicAuth(rpcuser, rpcpassword)
 

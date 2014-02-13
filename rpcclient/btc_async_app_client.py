@@ -3,11 +3,23 @@ import threading
 from callback import CallbackEvent
 from rpcclient.common import report_exception
 from constants import BTC, BTC_CONNECTION_TIMEOUT
+import counterpartyd.lib.config as config
 
+
+def url_for_client(host=None, port=None, rpcuser=None, rpcpassword=None):
+    if host is None:
+        host = config.BITCOIND_RPC_CONNECT
+    if port is None:
+        port = config.BITCOIND_RPC_PORT
+    if rpcuser is None:
+        rpcuser = config.BITCOIND_RPC_USER
+    if rpcpassword is None:
+        rpcpassword = config.BITCOIND_RPC_PASSWORD
+    return "http://%s:%s@%s:%s" % (rpcuser, rpcpassword, host, port)
 
 class BTCAsyncAppClient(AuthServiceProxy):
-    def __init__(self, host='localhost', port=8332, rpcuser='bitcoinrpc', rpcpassword='PASSWORD'):
-        url = "http://%s:%s@%s:%s" % (rpcuser, rpcpassword, host, port)
+    def __init__(self, host=None, port=None, rpcuser=None, rpcpassword=None):
+        url = url_for_client(host, port, rpcuser, rpcpassword)
         super(BTCAsyncAppClient, self).__init__(url, timeout=BTC_CONNECTION_TIMEOUT)
 
     def _async_call(self, action, callback, *args, **kwargs):

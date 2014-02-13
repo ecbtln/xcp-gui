@@ -13,3 +13,7 @@ class InvalidRPCArguments(InvalidRPCCall):
 class RPCError(Exception):
     pass
 
+
+class ConfigurationError(Exception):
+    pass
+

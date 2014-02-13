@@ -9,11 +9,11 @@ class XCPApplication(QApplication):
     """
     A basic subclass of the QApplication object that provides us with some app-wide state
     """
-    def __init__(self, *args, options,  **kwargs):
+    def __init__(self, *args, **kwargs):
         super(XCPApplication, self).__init__(*args, **kwargs)
         self.wallet = Wallet()
-        self.xcp_client = XCPAsyncAppClient(**options[XCP])
-        self.btc_client = BTCAsyncAppClient(**options[BTC])
+        self.xcp_client = XCPAsyncAppClient()
+        self.btc_client = BTCAsyncAppClient()
 
     def examine_local_wallet(self, after):
         def cb(res):

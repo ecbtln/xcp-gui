@@ -140,7 +140,7 @@ class CallbackEvent(QtCore.QEvent):
         self.func()
 
     @classmethod
-    def post(cls, func, *args, **kwargs):
+    def post(cls, func):
         """
         Post a callable to run in the main thread
         """
