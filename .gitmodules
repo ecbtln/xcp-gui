@@ -1,0 +1,3 @@
+[submodule "counterpartyd"]
+	path = counterpartyd
+	url = https://github.com/PhantomPhreak/counterpartyd.git
