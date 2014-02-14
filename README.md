@@ -46,12 +46,8 @@ starting the counterpartyd server. In this case, the GUI relies on a server that
 
 # Installation
 The project also is meant to be built as a standalone application (akin to Bitcoin-Qt). To freeze the application,
-the project relies on [cx_Freeze](http://cx-freeze.sourceforge.net).
+the project relies on [py2app](https://pypi.python.org/pypi/py2app/).
 
-If installed correctly, the package can be compiled to an executable with `python setup.py build` on any architecture
+If installed correctly, the package can be compiled to an executable with `python setup.py py2app` on any architecture
 with all the above dependencies installed. The freezing process has not been tested so far, and there are expected to be
 problems, but this demonstrates a proof of concept of the cross-platform nature of this project.
-
-# GUI
-...
-
