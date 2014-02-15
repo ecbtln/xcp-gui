@@ -25,6 +25,8 @@ class XCPAsyncAppClient(XCPClient):
         threading.Thread(target=call_api).start()
 
     def get_balances(self, btc_addresses, callback):
+        if len(btc_addresses) == 0:
+            return []
         self._async_api_call('get_balances', {'filters': [{'field': 'address',
                                                            'op': '==',
                                                            'value': x} for x in btc_addresses],

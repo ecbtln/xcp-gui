@@ -61,10 +61,15 @@ def verify_app_pre_reqs(splashScreen, app):
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
+        api_server.join(3)
+        if api_server.isAlive():
         # fork off in another thread
-        t = threading.Thread(target=lambda: blocks.follow(db))
-        t.start()
-        time.sleep(5)
+            t = threading.Thread(target=lambda: blocks.follow(db))
+            t.daemon = True
+            t.start()
+        else:
+            return "Cannot start the API subsystem. Is counterpartyd already running, or is " \
+                   "something else listening on port %s?" % config.RPC_PORT, ''
 #           splashScreen.bar.setValue(75)
 
     # we've now started up the webserver, finally just wait until the db is in a good state

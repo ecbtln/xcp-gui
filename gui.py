@@ -251,19 +251,19 @@ def main(argv):
         app.fetch_initial_data(callback)
 
         splashScreen.finish(mw)
-        mw.KEEP_ALIVE = True # boolean to signal the end of the thread right before the process closes
-        #app.LAST_BLOCK = None # variable that we check against the results of the last block check every time to see if
-        # any new blocks have been added
 
         def auto_updating_thread():
-            while mw.KEEP_ALIVE:
+            # variable that we check against the results of the last block check every time to see if
+            # any new blocks have been added
+            last_block = None
+            while True:
                 time.sleep(5)
                 client = XCPClient()
                 try:
                     block = client.get_running_info()['last_block']['block_index']
                     # any time we find a new block in the block chain, trigger a UI refresh
-                    if app.LAST_BLOCK is None or block > app.LAST_BLOCK:
-                        app.LAST_BLOCK = block
+                    if last_block is None or block > last_block:
+                        last_block = block
                         mw.setActiveBlockNumber(block)
                         app.fetch_initial_data(callback)
                 except Exception as e:
@@ -271,11 +271,9 @@ def main(argv):
                     time.sleep(10)  # sleep a little extra before continuing
 
         t = threading.Thread(target=auto_updating_thread)
+        t.daemon = True
         t.start()
-        res = app.exec()
-        mw.KEEP_ALIVE = False
-        t.join()
-        sys.exit(res)
+        sys.exit(app.exec())
 
 
 if __name__ == '__main__':
