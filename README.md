@@ -26,6 +26,8 @@ app, and the repo itself has added it as a submodule, the dependencies for count
 are reproduced below.
 * Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, cherrypy, pycoin, pyzmq(v2.2+) (see [this link](https://github.com/xnova/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
 
+To initialize the counterpartyd submodule once cloned run this from within the git directory:
+```git submodule init``` followed by ```git submodule update --recursive```
 
 # Usage
 To run the program, simply run `python gui.py` from the command line. The usage is the same as the usage for the
@@ -35,9 +37,6 @@ To run the program, simply run `python gui.py` from the command line. The usage 
 For example, a simple command setting the appropriate RPC usernames and passwords is:
 
 ```python gui.py --rpc-user=rpcuser --rpc-password=rpcpassword --bitcoind-rpc-password=PASSWORD --testnet```
-
-To initialize the counterpartyd submodule once pulled run this from within the git directory:
-```git submodule init``` followed by ```git submodule update --recursive```
 
 * Since the app is responsible for both the GUI and and the counterpartyd server, the RPC password is no longer required in configuration,
 and the GUI will automatically choose one to give to both the server and the GUI.

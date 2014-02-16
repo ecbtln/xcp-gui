@@ -24,8 +24,8 @@ class MainWindow(QMainWindow):
         tabWidget.addTab(self.asset_exchange, "Exchange")
         self.my_portfolio = MyPortfolio()
         tabWidget.addTab(self.my_portfolio, "My Portfolio")
-        tabWidget.addTab(QWidget(), "Broadcast/Bet")
-        tabWidget.addTab(TransactionHistory(), "Transaction History")
+        # tabWidget.addTab(QWidget(), "Broadcast/Bet")
+        # tabWidget.addTab(TransactionHistory(), "Transaction History")
 
         overview = QGroupBox('Overview')
         self.block_chain_label = QLabel()

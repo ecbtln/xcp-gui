@@ -11,6 +11,7 @@ from counterpartyd.lib import blocks
 import threading
 from rpcclient.xcp_client import XCPClient
 
+
 def verify_app_pre_reqs(splashScreen, app):
 
     def progress_ui(status_update):
@@ -61,7 +62,7 @@ def verify_app_pre_reqs(splashScreen, app):
         api_server = api.APIServer()
         api_server.daemon = True
         api_server.start()
-        api_server.join(3)
+        api_server.join(4) # wait 3 seconds, if the thread is dead that means an exception was thrown
         if api_server.isAlive():
         # fork off in another thread
             t = threading.Thread(target=lambda: blocks.follow(db))

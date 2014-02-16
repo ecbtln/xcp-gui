@@ -5,6 +5,7 @@ from constants import BTC, MAX_SPINBOX_INT
 from widgets import QAssetValueSpinBox, AssetLineEdit, ShowTransactionDetails
 from .asset_info_view import AssetInfoView
 
+
 class AssetExchange(QWidget):
     def __init__(self, *args, **kwargs):
         super(AssetExchange, self).__init__(*args, **kwargs)
@@ -35,7 +36,7 @@ class AssetExchange(QWidget):
         vbox_layout.addWidget(self.open_orders)
         group_box.setLayout(vbox_layout)
         glob_vbox_layout.addWidget(group_box)
-        group_box = QGroupBox('Order Matches')
+        group_box = QGroupBox('Order Matches (Double click to BTCpay)')
         vbox_layout = QVBoxLayout()
         self.order_matches = OrderMatchesTableView()
         vbox_layout.addWidget(self.order_matches)
@@ -81,7 +82,7 @@ class AssetExchange(QWidget):
                 self.order_matches.setItem(i, 4, QTableWidgetItem(o['tx1_address']))
                 self.order_matches.setItem(i, 5, QTableWidgetItem('%s %s' % (backward_amount, backward_asset)))
                 self.order_matches.setItem(i, 6, QTableWidgetItem(o['validity']))
-        app.xcp_client.get_order_matches(callback)
+        app.xcp_client.get_order_matches_pending_btcpay(callback)
 
     def fetch_open_orders(self):
         app = QApplication.instance()
@@ -125,8 +126,7 @@ class OrderMatchesTableView(QTableWidget):
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.data = None
-        #self.cellDoubleClicked.connect(self.doubleClickedCell)
-        #TODO: figure out the correct api call to get this working
+        self.cellDoubleClicked.connect(self.doubleClickedCell)
 
     def doubleClickedCell(self, row, col):
         el = self.data[row]

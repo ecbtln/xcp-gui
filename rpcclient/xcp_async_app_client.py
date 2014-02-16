@@ -5,7 +5,8 @@ from utils import AtomicInteger
 from exceptions import InvalidRPCArguments, RPCError
 from callback import CallbackEvent
 from rpcclient.common import report_exception
-from constants import XCP, BTC
+from constants import XCP
+
 
 class XCPAsyncAppClient(XCPClient):
     """
@@ -117,8 +118,13 @@ class XCPAsyncAppClient(XCPClient):
                                             'is_valid': True},
                              callback)
 
-    def get_order_matches(self, callback):
-        self._async_api_call('get_order_matches', {'is_mine': True}, callback)
+    def get_order_matches_pending_btcpay(self, callback):
+        self._async_api_call('get_order_matches',{'is_valid': False,
+                                                  'is_mine': True,
+                                                  'filters':[{'field': 'validity',
+                                                         'op': '==',
+                                                         'value': 'pending'}]},
+                             callback)
 
     # def get_btcpay_order_matches(self, callback):
     #     self._async_api_call('get_order_matches', {'order_by': 'tx0_index',
@@ -126,3 +132,14 @@ class XCPAsyncAppClient(XCPClient):
 
     def get_issuances(self, callback):
         self._async_api_call('get_issuances', [], callback)
+
+    def do_transfer(self, source, asset, divisible, destination, callback):
+        self._async_api_call('do_issuance', {'source': source,
+                                             'quantity': 0,
+                                             'asset': asset,
+                                             'divisible': int(divisible),
+                                             'transfer_destination': destination}, callback)
+
+    def get_btcpays(self, address, callback):
+        self._async_api_call('get_btcpays', {'is_valid': False,
+                                             }, callback)

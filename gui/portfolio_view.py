@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton, QFormLayout, QLin
 from PyQt5.Qt import QTextCursor
 from PyQt5.QtCore import QDateTime
 from widgets import QAssetValueSpinBox, ShowTransactionDetails, AssetLineEdit
-from constants import MAX_BYTES_ASSET_DESCRIPTION, MAX_SPINBOX_INT, MIN_LENGTH_ASSET_NAME
+from constants import MAX_BYTES_ASSET_DESCRIPTION, MAX_SPINBOX_INT, MIN_LENGTH_ASSET_NAME, XCP
 from models import Asset
 
 
@@ -20,8 +20,12 @@ class MyPortfolio(QWidget):
         vertical_layout.addWidget(self.send_asset_widget)
         send_asset_box.setLayout(vertical_layout)
         grid_layout.addWidget(send_asset_box, 0, 0)
+        asset_ownership_box = QGroupBox("Asset Admin Panel")
+        vertical_layout = QVBoxLayout()
         self.ownership_panel = AssetOwnershipPanel()
-        grid_layout.addWidget(AssetOwnershipPanel(), 1, 0)
+        vertical_layout.addWidget(self.ownership_panel)
+        asset_ownership_box.setLayout(vertical_layout)
+        grid_layout.addWidget(asset_ownership_box, 1, 0)
         self.asset_table = MyAssetTable()
         grid_layout.addWidget(self.asset_table, 0, 1, 2, 1)
         grid_layout.setColumnStretch(1, 6)
@@ -33,54 +37,86 @@ class MyPortfolio(QWidget):
         self.ownership_panel.update_data(portfolio)
 
 
-class AssetOwnershipPanel(QGroupBox):
-    def __init__(self):
-        super(AssetOwnershipPanel, self).__init__("Asset Admin Panel")
+class AssetOwnershipPanel(QWidget):
+    def __init__(self, *args, **kwargs):
+        super(AssetOwnershipPanel, self).__init__(*args, **kwargs)
         layout = QFormLayout()
         issue_asset_button = QPushButton('Issue New Asset')
         issue_asset_button.clicked.connect(self.issue_asset)
         layout.addRow(issue_asset_button)
         self.owned_assets = []
-        self.setLayout(layout)
-        self.asset_select = QComboBox()
+        self.combo_box = QComboBox()
+        layout.addRow(self.combo_box)
         button_box = QDialogButtonBox()
-        button_box.addButton("Send Dividends", QDialogButtonBox.ActionRole)
+        send_dividends_button = QPushButton("Send Dividends")
+        send_dividends_button.clicked.connect(self.do_dividends)
+        button_box.addButton(send_dividends_button, QDialogButtonBox.ActionRole)
         button_box.addButton("Callback", QDialogButtonBox.ActionRole)
         button_box2 = QDialogButtonBox()
-        button_box2.addButton("Transfer", QDialogButtonBox.ActionRole)
+        transfer_asset_button = QPushButton("Transfer")
+        button_box2.addButton(transfer_asset_button, QDialogButtonBox.ActionRole)
+        transfer_asset_button.clicked.connect(self.transfer_asset)
         button_box2.addButton("Issue More", QDialogButtonBox.ActionRole)
         self.button_box = [button_box, button_box2]
-        layout.addRow(self.asset_select)
         layout.addRow(self.button_box[0])
         layout.addRow(self.button_box[1])
+
+        self.setLayout(layout)
         self.update_data()
+
+    def current_asset(self):
+        return self.combo_box.currentText()
+
+    def do_dividends(self):
+        DoDividendDialog(self.current_asset()).exec_()
+
+    def transfer_asset(self):
+        TransferAssetDialog(self.current_asset()).exec_()
 
     def issue_asset(self):
         dialog = AssetIssueDialog()
         dialog.exec_()
 
     def update_data(self, portfolio=None):
+        self.combo_box.clear()
         if portfolio is None:
             assets = []
+            num_assets = 0
         else:
-            assets = [a for a in portfolio._assets if portfolio.owns_asset(a)]
+            assets = [a.name for a in portfolio.assets if portfolio.owns_asset(a.name)]
+            num_assets = len(assets)
 
-        if len(assets) > 0:
-            #TODO: for some reason the combo box isn't really changing state
-            # keep track of which was highlighted
-            old = self.asset_select.currentText()
+        self.combo_box.setEnabled(num_assets > 0)
+        self.button_box[0].setEnabled(num_assets > 0)
+        self.button_box[1].setEnabled(num_assets > 0)
 
-            self.asset_select.clear()
-            self.asset_select.addItems(assets)
-            if old in assets:
-                self.asset_select.setCurrentText(old)
-            self.asset_select.setToolTip('')
-        else:
-            self.asset_select.setToolTip('The current address does not own the rights to any assets. You may issue an asset above to get started.')
+        if num_assets > 0:
+            self.combo_box.addItems(assets)
 
 
 
-        self.owned_assets = assets
+        # if portfolio is None:
+        #     assets = []
+        # else:
+        #     assets = [a for a in portfolio._assets if portfolio.owns_asset(a)]
+        #
+        # if len(assets) > 0:
+        #     #TODO: for some reason the combo box isn't really changing state
+        #     # keep track of which was highlighted
+        #     old = self.asset_select.currentText()
+        #
+        #     self.asset_select.clear()
+        #     self.asset_select.addItems(assets)
+        #     if old in assets:
+        #         self.asset_select.setCurrentText(old)
+        #     self.asset_select.setToolTip('')
+        #
+        # else:
+        #     self.asset_select.clear()
+        #
+
+
+        # self.owned_assets = assets
             # reinitialize the form layout
 
 
@@ -93,6 +129,7 @@ class MyAssetTable(QTableWidget):
         self.setHorizontalHeaderLabels(["Asset", "Amount"])
         self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
 
     def update_data(self, portfolio):
         self.clearContents()
@@ -306,3 +343,77 @@ class SendAssetWidget(QWidget):
             ShowTransactionDetails(response).exec_()
 
         QApplication.instance().xcp_client.do_send(sender, recipient, amount, asset, success_callback)
+
+
+class DoDividendDialog(QDialog):
+    def __init__(self, asset, *args, **kwargs):
+        super(DoDividendDialog, self).__init__(*args, **kwargs)
+        self.setWindowTitle("Issue Dividends for %s" % asset)
+        self.asset = asset
+        form_layout = QFormLayout()
+        self.spinbox = QAssetValueSpinBox()
+        self.spinbox.set_asset_divisible(True)
+        form_layout.addRow("Quantity Per Unit: ", self.spinbox)
+        self.spinbox.setToolTip("The amount of XCP rewarded per whole unit of the asset.")
+        button_box = QDialogButtonBox()
+        button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+        self.send_button = QPushButton("Send")
+        button_box.addButton(self.send_button, QDialogButtonBox.AcceptRole)
+        form_layout.addRow(button_box)
+        button_box.rejected.connect(self.close)
+        button_box.accepted.connect(self.submit)
+        self.setLayout(form_layout)
+
+    def submit(self):
+        app = QApplication.instance()
+        def success_callback(response):
+            print(response)
+            ShowTransactionDetails(response).exec_()
+        wallet = app.wallet
+        a = wallet.get_asset(XCP)
+
+        app.xcp_client.do_dividend(wallet.active_address,
+                                   a.convert_for_api(self.spinbox.value()),
+                                   self.asset,
+                                   success_callback)
+        self.close()
+
+
+class TransferAssetDialog(QDialog):
+    def __init__(self, asset, *args, **kwargs):
+        super(TransferAssetDialog, self).__init__(*args, **kwargs)
+        self.setWindowTitle("Transfer %s to..." % asset)
+        self.asset = asset
+        form_layout = QFormLayout()
+        self.to_address = QLineEdit()
+        self.to_address.setToolTip("The address to receive the asset")
+        form_layout.addRow("Transfer to: ", self.to_address)
+        self.setToolTip("Transfer the ownership of an asset.")
+        button_box = QDialogButtonBox()
+        button_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+        self.send_button = QPushButton("Transfer")
+        button_box.addButton(self.send_button, QDialogButtonBox.AcceptRole)
+        form_layout.addRow(button_box)
+        button_box.rejected.connect(self.close)
+        button_box.accepted.connect(self.submit)
+        self.setLayout(form_layout)
+        self.to_address.textChanged.connect(self.to_changed)
+
+    def to_changed(self):
+        self.setEnabled(len(self.to_address.text()) > 0)
+
+    def submit(self):
+        app = QApplication.instance()
+        def success_callback(response):
+            print(response)
+            ShowTransactionDetails(response).exec_()
+        wallet = app.wallet
+        a = wallet.get_asset(self.asset)
+        #TODO: it doesn't look like this API is set up in the backend yet
+        app.xcp_client.do_transfer(app.wallet.active_address, self.asset, a.divisible, self.to_address.text()
+             ,success_callback)
+        self.close()
+
+
+
+
