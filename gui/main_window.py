@@ -1,11 +1,11 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QGridLayout, QTabWidget, QGroupBox, QLabel, QApplication, QHBoxLayout
-from gui.portfolio_view import MyPortfolio
-from gui.asset_exchange_view import AssetExchange
-from gui.transaction_history_view import TransactionHistory
-from gui.my_wallet_view import MyWalletGroupBox
+from .portfolio_view import MyPortfolio
+from .asset_exchange_view import AssetExchange
+from .transaction_history_view import TransactionHistory
+from .my_wallet_view import MyWalletGroupBox
+from . import PyQtGui
 
 
-class MainWindow(QMainWindow):
+class MainWindow(PyQtGui.QMainWindow):
 
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -16,10 +16,10 @@ class MainWindow(QMainWindow):
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
         self.setWindowTitle('Counterparty Exchange')
-        central_widget = QWidget()
+        central_widget = PyQtGui.QWidget()
         self.setCentralWidget(central_widget)
-        grid_layout = QGridLayout()
-        tabWidget = QTabWidget()
+        grid_layout = PyQtGui.QGridLayout()
+        tabWidget = PyQtGui.QTabWidget()
         self.asset_exchange = AssetExchange()
         tabWidget.addTab(self.asset_exchange, "Exchange")
         self.my_portfolio = MyPortfolio()
@@ -27,9 +27,9 @@ class MainWindow(QMainWindow):
         # tabWidget.addTab(QWidget(), "Broadcast/Bet")
         # tabWidget.addTab(TransactionHistory(), "Transaction History")
 
-        overview = QGroupBox('Overview')
-        self.block_chain_label = QLabel()
-        layout = QHBoxLayout()
+        overview = PyQtGui.QGroupBox('Overview')
+        self.block_chain_label = PyQtGui.QLabel()
+        layout = PyQtGui.QHBoxLayout()
         layout.addWidget(self.block_chain_label)
         overview.setLayout(layout)
 
@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
         return lambda results: self.wallet_view.update_data(results)
 
     def fetch_initial_data(self):
-        QApplication.instance().fetch_initial_data(self.fetch_initial_data_lambda())
+        PyQtGui.QApplication.instance().fetch_initial_data(self.fetch_initial_data_lambda())
 
     def initialize_data_in_tabs(self):
         """

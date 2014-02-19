@@ -1,27 +1,26 @@
-from PyQt5.QtWidgets import QGroupBox, QComboBox, QApplication, QFormLayout, QDialogButtonBox, QPushButton, QCheckBox
 from utils import display_alert
+from . import PyQtGui
 
-
-class MyWalletGroupBox(QGroupBox):
+class MyWalletGroupBox(PyQtGui.QGroupBox):
     def __init__(self, parent):
-        super(QGroupBox, self).__init__('Wallet')
+        super(PyQtGui.QGroupBox, self).__init__('Wallet')
         self.setFixedHeight(110)
         self.mw = parent
-        self.combo_box = QComboBox()
+        self.combo_box = PyQtGui.QComboBox()
         self.combo_box.setMinimumWidth(330)
         self.combo_box.currentIndexChanged.connect(self.selected_address_changed)
-        self.update_data(QApplication.instance().wallet.addresses)
-        form_layout = QFormLayout()
+        self.update_data(PyQtGui.QApplication.instance().wallet.addresses)
+        form_layout = PyQtGui.QFormLayout()
         form_layout.addRow("Select an Address: ", self.combo_box)
         # TODO: add checkbox for toggle between showing all accounts and showing only accounts that have BTC in them
-        self.check_box = QCheckBox()
-        button_box = QDialogButtonBox()
-        copy_address = QPushButton("Copy Address")
+        self.check_box = PyQtGui.QCheckBox()
+        button_box = PyQtGui.QDialogButtonBox()
+        copy_address = PyQtGui.QPushButton("Copy Address")
         copy_address.clicked.connect(self.copy_to_clipboard)
-        button_box.addButton(copy_address, QDialogButtonBox.NoRole)
-        new_address = QPushButton("New Address")
+        button_box.addButton(copy_address, PyQtGui.QDialogButtonBox.NoRole)
+        new_address = PyQtGui.QPushButton("New Address")
         new_address.clicked.connect(self.new_address)
-        button_box.addButton(new_address, QDialogButtonBox.ResetRole)
+        button_box.addButton(new_address, PyQtGui.QDialogButtonBox.ResetRole)
         form_layout.addRow(button_box)
         self.setLayout(form_layout)
 
@@ -32,11 +31,12 @@ class MyWalletGroupBox(QGroupBox):
             self.combo_box.addItems(addresses)
             self.combo_box.setCurrentIndex(0)
             if old in addresses:
-                self.combo_box.setCurrentText(old)
+                all_items = [self.combo_box.itemText(i) for i in range(self.combo_box.count())]
+                self.combo_box.setCurrentIndex(all_items.index(old))
         self.selected_address_changed()
 
     def selected_address_changed(self):
-        wallet = QApplication.instance().wallet
+        wallet = PyQtGui.QApplication.instance().wallet
         if self.combo_box.count() == 0:
             wallet.active_address_index = None
         else:
@@ -45,16 +45,16 @@ class MyWalletGroupBox(QGroupBox):
         self.mw.my_portfolio.update_data(wallet.active_portfolio)
 
     def copy_to_clipboard(self):
-        QApplication.clipboard().setText(self.combo_box.currentText())
+        PyQtGui.QApplication.clipboard().setText(self.combo_box.currentText())
 
     def new_address(self):
         def process_address(address):
             print("Generated new address: ", address)
-            wallet = QApplication.instance().wallet
+            wallet = PyQtGui.QApplication.instance().wallet
             old = wallet.addresses
             old.append(address)
             wallet.update_addresses(old)
             self.update_data(old)
             display_alert("Added new address (%s) to wallet" % address)
-        QApplication.instance().btc_client.get_new_address(process_address)
+        PyQtGui.QApplication.instance().btc_client.get_new_address(process_address)
 

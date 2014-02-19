@@ -1,11 +1,11 @@
-from PyQt5.QtWidgets import QApplication
+from gui import PyQtGui
 from models import Wallet, Asset
 from rpcclient.btc_async_app_client import BTCAsyncAppClient
 from rpcclient.xcp_async_app_client import XCPAsyncAppClient
 from constants import XCP
 
 
-class XCPApplication(QApplication):
+class XCPApplication(PyQtGui.QApplication):
     """
     A basic subclass of the QApplication object that provides us with some app-wide state
     """

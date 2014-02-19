@@ -1,10 +1,7 @@
-from PyQt5.QtWidgets import QDoubleSpinBox, QDialog, QTextEdit, QDialogButtonBox, QVBoxLayout, QLineEdit
+from . import PyQtGui, PyQt
 from constants import Satoshi, MAX_SPINBOX_INT
-from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtCore import QRegExp
 
-
-class QAssetValueSpinBox(QDoubleSpinBox):
+class QAssetValueSpinBox(PyQtGui.QDoubleSpinBox):
     """
     Automatically toggles between satoshi-decimal and whole-number precision with a simple method call
     """
@@ -26,15 +23,15 @@ class QAssetValueSpinBox(QDoubleSpinBox):
         super(QAssetValueSpinBox, self).setMaximum(min(MAX_SPINBOX_INT, p_float))
 
 
-class ShowTransactionDetails(QDialog):
+class ShowTransactionDetails(PyQtGui.QDialog):
     def __init__(self, text):
         super(ShowTransactionDetails, self).__init__()
-        text_edit = QTextEdit()
+        text_edit = PyQtGui.QTextEdit()
         text_edit.setText("<b>Response</b>: %s" % text)
         self.setWindowTitle("Details")
-        button_box = QDialogButtonBox()
-        button_box.addButton("Close", QDialogButtonBox.AcceptRole)
-        layout = QVBoxLayout()
+        button_box = PyQtGui.QDialogButtonBox()
+        button_box.addButton("Close", PyQtGui.QDialogButtonBox.AcceptRole)
+        layout = PyQtGui.QVBoxLayout()
         layout.addWidget(text_edit)
         layout.addWidget(button_box)
         self.setMinimumHeight(180)
@@ -43,8 +40,8 @@ class ShowTransactionDetails(QDialog):
         text_edit.setReadOnly(True)
 
 
-class AssetLineEdit(QLineEdit):
+class AssetLineEdit(PyQtGui.QLineEdit):
     def __init__(self, *args, **kwargs):
         super(AssetLineEdit, self).__init__(*args, **kwargs)
-        self.setValidator(QRegExpValidator(QRegExp('[a-zA-Z]*')))
+        self.setValidator(PyQt.QtGui.QRegExpValidator(PyQt.QtCore.QRegExp('[a-zA-Z]*')))
         self.setPlaceholderText("GOOGL")

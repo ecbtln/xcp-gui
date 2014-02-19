@@ -1,5 +1,5 @@
 from threading import Lock
-from PyQt5.QtWidgets import QMessageBox, QPushButton
+from gui import PyQtGui
 
 
 class AtomicInteger:
@@ -41,14 +41,14 @@ class AtomicInteger:
 
 
 def display_alert(text, detailed_text=None, more_info=None):
-    message_box = QMessageBox()
-    message_box.setIcon(QMessageBox.Information)
+    message_box = PyQtGui.QMessageBox()
+    message_box.setIcon(PyQtGui.QMessageBox.Information)
     message_box.setText(text)
 
     if detailed_text:
         message_box.setDetailedText(detailed_text)
-    dismiss_button = QPushButton("Dismiss")
-    message_box.addButton(dismiss_button, QMessageBox.AcceptRole)
+    dismiss_button = PyQtGui.QPushButton("Dismiss")
+    message_box.addButton(dismiss_button, PyQtGui.QMessageBox.AcceptRole)
     message_box.setEscapeButton(dismiss_button)
     if more_info:
         message_box.setInformativeText(more_info)

@@ -17,9 +17,12 @@ these are:
 To run, the project has the following dependencies:
 * [Python 3](http://python.org)
 * [sip==4.15.4](http://www.riverbankcomputing.com/software/sip/download)
-* [PyQt5==5.1](http://www.riverbankcomputing.com/software/pyqt/download5)
+* [PyQt4==4.8](http://www.riverbankcomputing.com/software/pyqt/download)
 * [bitcoin-rpc](https://github.com/jgarzik/python-bitcoinrpc)
 * Bitcoind
+
+If possible, the project will look for PyQt5 to be installed, and then fallback to PyQt4 if needed, as is the case for
+Windows 7.
 
 In addition, since the project bundles in [counterpartyd](https://github.com/PhantomPhreak/counterpartyd) within the
 app, and the repo itself has added it as a submodule, the dependencies for counterpartyd are needed as well and

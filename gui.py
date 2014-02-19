@@ -4,7 +4,6 @@ from gui.main_window import MainWindow
 from application import XCPApplication
 from gui.startup_view import XCPSplashScreen
 import counterpartyd.lib.config as config
-
 import threading
 from rpcclient.xcp_client import XCPClient
 from constants import GUI_VERSION

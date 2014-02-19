@@ -108,24 +108,23 @@ class proxy(ref):
             return False
 
 
-from PyQt5 import QtCore, QtWidgets
+from gui import PyQtGui, PyQt
 
-
-class _Invoker(QtCore.QObject):
+class _Invoker(PyQt.QtCore.QObject):
 
     def customEvent(self, e):
         e.callback()
 
 
 # inspired from http://code.activestate.com/recipes/578634-pyqt-pyside-thread-safe-callbacks-main-loop-integr/
-class CallbackEvent(QtCore.QEvent):
+class CallbackEvent(PyQt.QtCore.QEvent):
     """
     A custom QEvent that contains a callback reference
 
     Also provides class methods for conveniently executing
     arbitrary callback, to be dispatched to the event loop.
     """
-    EVENT_TYPE = QtCore.QEvent.Type(QtCore.QEvent.registerEventType())
+    EVENT_TYPE = PyQt.QtCore.QEvent.Type(PyQt.QtCore.QEvent.registerEventType())
 
     __invoker = _Invoker()
 
@@ -166,7 +165,7 @@ class CallbackEvent(QtCore.QEvent):
         event = cls(reference)
 
         # post the event to the given receiver
-        QtWidgets.QApplication.postEvent(receiver, event)
+        PyQtGui.QApplication.postEvent(receiver, event)
 
 
 # example usage:
