@@ -17,15 +17,20 @@ these are:
 To run, the project has the following dependencies:
 * [Python 3](http://python.org)
 * [sip==4.15.4](http://www.riverbankcomputing.com/software/sip/download)
-* [PyQt5==5.1](http://www.riverbankcomputing.com/software/pyqt/download5)
+* [PyQt4==4.8](http://www.riverbankcomputing.com/software/pyqt/download)
 * [bitcoin-rpc](https://github.com/jgarzik/python-bitcoinrpc)
 * Bitcoind
+
+If possible, the project will look for PyQt5 to be installed, and then fallback to PyQt4 if needed, as is the case for
+Windows 7.
 
 In addition, since the project bundles in [counterpartyd](https://github.com/PhantomPhreak/counterpartyd) within the
 app, and the repo itself has added it as a submodule, the dependencies for counterpartyd are needed as well and
 are reproduced below.
 * Python 3 packages: apsw, requests, appdirs, prettytable, python-dateutil, json-rpc, cherrypy, pycoin, pyzmq(v2.2+) (see [this link](https://github.com/xnova/counterpartyd_build/blob/master/dist/reqs.txt) for exact working versions)
 
+To initialize the counterpartyd submodule once cloned run this from within the git directory:
+```git submodule init``` followed by ```git submodule update --recursive```
 
 # Usage
 To run the program, simply run `python gui.py` from the command line. The usage is the same as the usage for the
@@ -36,9 +41,6 @@ For example, a simple command setting the appropriate RPC usernames and password
 
 ```python gui.py --rpc-user=rpcuser --rpc-password=rpcpassword --bitcoind-rpc-password=PASSWORD --testnet```
 
-To initialize the counterpartyd submodule once pulled run this from without the git directory:
-```git submodule init```
-
 * Since the app is responsible for both the GUI and and the counterpartyd server, the RPC password is no longer required in configuration,
 and the GUI will automatically choose one to give to both the server and the GUI.
 * There is one additional configuration parameter, ``--no-counterpartyd``, that allows the GUI to be run without also
@@ -46,12 +48,8 @@ starting the counterpartyd server. In this case, the GUI relies on a server that
 
 # Installation
 The project also is meant to be built as a standalone application (akin to Bitcoin-Qt). To freeze the application,
-the project relies on [cx_Freeze](http://cx-freeze.sourceforge.net).
+the project relies on [py2app](https://pypi.python.org/pypi/py2app/).
 
-If installed correctly, the package can be compiled to an executable with `python setup.py build` on any architecture
+If installed correctly, the package can be compiled to an executable with `python setup.py py2app` on any architecture
 with all the above dependencies installed. The freezing process has not been tested so far, and there are expected to be
 problems, but this demonstrates a proof of concept of the cross-platform nature of this project.
-
-# GUI
-...
-

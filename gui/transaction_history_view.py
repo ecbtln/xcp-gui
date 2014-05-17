@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QWidget
+from . import PyQtGui
 
 
-class TransactionHistory(QWidget):
+class TransactionHistory(PyQtGui.QWidget):
     #TODO: see http://blockscan.com/address.aspx?q=1FwXZu9j2SZKPHJi3eDpzVrySABJChgJL7
     pass
     # self.setSelectionBehavior(QAbstractItemView.SelectRows)

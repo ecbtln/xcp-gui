@@ -4,17 +4,15 @@ from gui.main_window import MainWindow
 from application import XCPApplication
 from gui.startup_view import XCPSplashScreen
 import counterpartyd.lib.config as config
-from callback import CallbackEvent
-from counterpartyd.lib import util
-#from counterpartyd import counterpartyd
 import threading
 from rpcclient.xcp_client import XCPClient
-from constants import GUI_VERSION, BTC_CONNECTION_TIMEOUT
+from constants import GUI_VERSION
 import appdirs
 import configparser
 import os
 import exceptions
 import time
+from startup import verify_app_pre_reqs
 
 
 def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=None,
@@ -197,6 +195,7 @@ def set_options (data_dir=None, bitcoind_rpc_connect=None, bitcoind_rpc_port=Non
     config.HEADLESS = headless
     config.START_RPC_SERVER = start_server
 
+
 def main(argv):
     # Parse command-line arguments.
     parser = argparse.ArgumentParser(prog='counterparty-gui', description='the GUI app for the counterparty protocol')
@@ -233,91 +232,17 @@ def main(argv):
     app = XCPApplication(argv)
     splashScreen = XCPSplashScreen()
     splashScreen.show()
-    splashScreen.showMessage("Verifying valid bitcoind connection...")
-    failure_message = []
+    failure_message = verify_app_pre_reqs(splashScreen, app)
 
-    def verify_connection_and_start_server():
-        from bitcoinrpc.authproxy import AuthServiceProxy
-        from rpcclient.btc_async_app_client import url_for_client
-        import time
-        import urllib.request
-        import traceback
-
-        client = AuthServiceProxy(url_for_client(), timeout=BTC_CONNECTION_TIMEOUT)
-
-        try:
-            current_count = client.getblockcount()
-        except Exception as e:
-            failure_message.append(("Could not connect to bitcoin", traceback.format_exc()))
-            return
-
-#        splashScreen.bar.setValue(25) # step 1 of 5 complete
-
-        splashScreen.showMessage("Verifying blockchain up to date")
-        if config.TESTNET:
-            url = 'http://blockexplorer.com/testnet/q/getblockcount'
-        else:
-            url = 'https://blockchain.info/q/getblockcount'
-
-        def get_last_block():
-            return urllib.request.urlopen(url).read().decode('utf-8')
-
-        last_block = get_last_block()
-        while current_count != last_block:
-            try:
-                current_count = client.getblockcount()
-                last_block = int(get_last_block())
-                time.sleep(3)
-                if current_count == last_block:
-                    break
-                print("Current blockchain progress: %s/%s" % (current_count, last_block))
-                splashScreen.showMessage("Current blockchain progress: %s/%s" % (current_count, last_block))
-            except Exception as e:
-                failure_message.append((str(e), traceback.format_exc()))
-                return
-
-#        splashScreen.bar.setValue(50) # step 2 of 5 complete
-        from counterpartyd.lib import api
-        from counterpartyd.lib import blocks
-
-        if config.START_RPC_SERVER:
-            splashScreen.showMessage("Starting counterpartyd")
-            db = util.connect_to_db()
-            api_server = api.APIServer()
-            api_server.daemon = True
-            api_server.start()
-            # fork off in another thread
-            t = threading.Thread(target=lambda: blocks.follow(db))
-            t.start()
-            time.sleep(10)
- #           splashScreen.bar.setValue(75)
-
-        # we've now started up the webserver, finally just wait until the db is in a good state
-        while True:
-            splashScreen.showMessage("Catching up the counterpartyd blockchain")
-            client = XCPClient()
-            try:
-                response = client.get_running_info()
-                if response['db_caught_up']:
-                    #block = response['last_block']['block_index']
-                    break
-                time.sleep(5)
-            except Exception as e:
-                failure_message.append((str(e), traceback.format_exc()))
-                return
-
-
-
-    CallbackEvent.post(verify_connection_and_start_server)
-    app.processEvents()
-    if len(failure_message):
+    if failure_message is not None:
         # create a dialog that, when dismissed, will kill the app.
         from utils import display_alert
         splashScreen.close()
-        info, exc = failure_message[0]
+        info, exc = failure_message
         display_alert(info, exc)
     else:
         mw = MainWindow()
+
         def callback(results):
             mw.fetch_initial_data_lambda()(results)
             mw.initialize_data_in_tabs()
@@ -325,18 +250,19 @@ def main(argv):
         app.fetch_initial_data(callback)
 
         splashScreen.finish(mw)
-        mw.KEEP_ALIVE = True # boolean to signal the end of the thread right before the process closes
-        #app.LAST_BLOCK = None # variable that we check against the results of the last block check every time to see if
-        # any new blocks have been added
+
         def auto_updating_thread():
-            while mw.KEEP_ALIVE:
+            # variable that we check against the results of the last block check every time to see if
+            # any new blocks have been added
+            last_block = None
+            while True:
                 time.sleep(5)
                 client = XCPClient()
                 try:
                     block = client.get_running_info()['last_block']['block_index']
                     # any time we find a new block in the block chain, trigger a UI refresh
-                    if app.LAST_BLOCK is None or block > app.LAST_BLOCK:
-                        app.LAST_BLOCK = block
+                    if last_block is None or block > last_block:
+                        last_block = block
                         mw.setActiveBlockNumber(block)
                         app.fetch_initial_data(callback)
                 except Exception as e:
@@ -344,11 +270,9 @@ def main(argv):
                     time.sleep(10)  # sleep a little extra before continuing
 
         t = threading.Thread(target=auto_updating_thread)
+        t.daemon = True
         t.start()
-        res = app.exec()
-        mw.KEEP_ALIVE = False
-        t.join()
-        sys.exit(res)
+        sys.exit(app.exec())
 
 
 if __name__ == '__main__':
